@@ -1,0 +1,56 @@
+---
+title: "Read_me"
+author: "Galindo, B. A"
+date: "2024-04-29"
+output: html_document
+---
+
+
+# Raw data
+```{r eval=FALSE}
+data <- read.csv("/home/bambrozi/2_CORTISOL/Data/T4_Elora_Data_04_25_2024.csv")
+
+# Replace "treated" with NA
+data$T4Cortisol[data$T4Cortisol == "treated" | data$T4Cortisol == "Treated at T2" | data$T4Cortisol == "treated at T2"] <- NA
+# Convert the column to numeric, coercing non-numeric values to NA
+data$T4Cortisol <- as.numeric(as.character(data$T4Cortisol))
+#Filtering only the lines with values
+data <- data[!is.na(data$T4Cortisol),]
+#creating new data file cleaned  
+write.csv(data, "/home/bambrozi/2_CORTISOL/Data/data_clean.csv", row.names = F)
+
+print(data)
+
+
+# Summary Statistics
+summary(data$T4Cortisol)
+# Histogram
+hist(data$T4Cortisol, breaks = 20, main = "Histogram of T4 Cortisol", xlab = "T4 Cortisol")
+# Boxplot
+boxplot(data$T4Cortisol, main = "Boxplot of T4 Cortisol", ylab = "T4 Cortisol")
+# Density Plot
+plot(density(data$T4Cortisol), main = "Density Plot of T4 Cortisol", xlab = "T4 Cortisol", ylab = "Density")
+# Calculate the theoretical quantiles
+qqnorm(data$T4Cortisol, main = "QQ Plot of T4Cortisol", xlim = c(min(qqnorm(data$T4Cortisol)$x), max(qqnorm(data$T4Cortisol)$x)), ylim = c(min(qqnorm(data$T4Cortisol)$y), max(qqnorm(data$T4Cortisol)$y) + 2 * IQR(qqnorm(data$T4Cortisol)$y)))
+# Add the QQ line
+qqline(data$T4Cortisol, col = "red")
+```
+
+
+
+**Summary statistics**
+<img src="image1.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Histogram**
+<img src="image2.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Density**
+<img src="image3.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Box_Plot**
+<img src="image4.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**qq_Plot**
+<img src="image5.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
