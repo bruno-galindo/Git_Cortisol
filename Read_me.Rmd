@@ -2,7 +2,11 @@
 title: "Read_me"
 author: "Galindo, B. A"
 date: "2024-04-29"
-output: html_document
+output:
+  html_document:
+    toc: true
+  pdf_document:
+    toc: true
 ---
 
 
@@ -55,6 +59,8 @@ qqline(data$T4Cortisol, col = "red")
 **qq_Plot**
 <img src="image5.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+**Shapiro-Wilk normality test**
+<img src="image15.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 ## Categorical Phenotype
 
@@ -124,3 +130,28 @@ The individuals frequency distribution in theese categories are shown in the plo
 <img src="image9.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 <img src="image10.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 <img src="image11.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+## Removing "outliers"
+
+Observing the previous plots I tried to **remove the "outliers"** phenotypes above 1250, but the outcome from Shapiro test is still indicating no normality of the data.
+
+```{r eval=FALSE}
+library(tidyverse)
+
+data_no_out <- filter(data, T4Cortisol < 1250)
+
+# Create QQ plot
+qqnorm(data_no_out$T4Cortisol, main = "QQ Plot of T4Cortisol", xlab = "Theoretical Quantiles", ylab = "Sample Quantiles")
+qqline(data$T4Cortisol, col = "red")
+
+boxplot(data_no_out$T4Cortisol, main = "Boxplot of T4 Cortisol", ylab = "T4 Cortisol")
+
+hist(data_no_out$T4Cortisol, breaks = 20, main = "Histogram of T4 Cortisol", xlab = "T4 Cortisol")
+
+shapiro.test(data$T4Cortisol)
+```
+
+<img src="image12.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image13.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image14.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image15.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
