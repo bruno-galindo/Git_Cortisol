@@ -20,8 +20,11 @@ data <- data[!is.na(data$T4Cortisol),]
 write.csv(data, "/home/bambrozi/2_CORTISOL/Data/data_clean.csv", row.names = F)
 
 print(data)
+```
 
+# Continuous Phenotype
 
+```{r eval=FALSE}
 # Summary Statistics
 summary(data$T4Cortisol)
 # Histogram
@@ -35,7 +38,6 @@ qqnorm(data$T4Cortisol, main = "QQ Plot of T4Cortisol", xlim = c(min(qqnorm(data
 # Add the QQ line
 qqline(data$T4Cortisol, col = "red")
 ```
-
 
 
 **Summary statistics**
@@ -54,3 +56,71 @@ qqline(data$T4Cortisol, col = "red")
 <img src="image5.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 
+## Categorical Phenotype
+
+I received from Umesh a e-mail informing the three categories that the animals could be sorted based on their cortisol concentration.
+
+<img src="image6.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+```{r eval=FALSE}
+
+data$Categorical <- ifelse(data$T4Cortisol >= 956, "H", 
+                           ifelse(data$T4Cortisol <= 190.8, "L", "M"))
+
+table(data$Categorical)
+library(ggplot2)
+
+# Reorder the levels of the 'Categorical' column
+data$Categorical <- factor(data$Categorical, levels = c("L", "M", "H"))
+
+# Create the histogram with reordered categories
+ggplot(data, aes(x = Categorical, fill = Categorical)) +
+  geom_bar() +
+  labs(title = "Histogram of T4Cortisol by Category",
+       x = "Category",
+       y = "Frequency") +
+  theme_minimal()
+
+# Create the histogram
+ggplot(data, aes(x = T4Cortisol, fill = Categorical)) +
+  geom_histogram(binwidth = 50, color = "black", alpha = 0.7) + # Adjust binwidth as needed
+  labs(title = "Histogram of T4Cortisol with Color by Category",
+       x = "T4 Cortisol",
+       y = "Frequency",
+       fill = "Category") +
+  scale_fill_manual(values = c("H" = "red", "M" = "blue", "L" = "green")) + # Adjust colors if needed
+  theme_minimal()
+
+# Create the density plot
+ggplot(data, aes(x = T4Cortisol, fill = Categorical)) +
+  geom_density(alpha = 0.3) +
+  labs(title = "Density Plot of T4Cortisol with Color by Category",
+       x = "T4Cortisol",
+       y = "Density",
+       fill = "Category") +
+  scale_fill_manual(values = c("H" = "red", "M" = "blue", "L" = "green")) + # Adjust colors if needed
+  theme_minimal()
+
+# Create a density plot
+ggplot(data, aes(x = T4Cortisol)) +
+  geom_density() +
+  geom_vline(xintercept = c(956, 190.8), linetype = "dashed", color = "red") +
+  labs(title = "Density Plot of T4Cortisol with Vertical Lines",
+       x = "T4Cortisol",
+       y = "Density") +
+  theme_minimal()
+```
+
+The animals were sorted in these three categories 
+>H = Hight
+>M = Medium
+>L = Low
+
+<img src="image7.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+The individuals frequency distribution in theese categories are shown in the plots below
+
+<img src="image8.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image9.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image10.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image11.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
