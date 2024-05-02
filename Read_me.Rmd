@@ -155,3 +155,550 @@ shapiro.test(data$T4Cortisol)
 <img src="image13.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 <img src="image14.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 <img src="image15.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# GENOTYPES
+
+Lucas Alcântara sent me the path to the genotype and pedigree files:
+/data/cgil/daiclu/6_Data/database/public_output/bruno
+
+<img src="image17.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+In this folder we found the following files:
+
+<ul>
+<li>**bruno_gntps.txt**: the file with the genotypes in  **012 format**
+<li>**bruno_ids.csv**: file with elora_id, cdn_id, iid
+<li>**bruno_ped.id.csv**: pedigree with cdn_id
+<li>**bruno_ped.iid.csv**: pedigree with iid
+</ul>
+
+I made a copy of this files in a folder called **Raw_files**:
+
+<span style="color: blue;">/home/bambrozi/2_CORTISOL/RawFiles</span>
+
+This directory has two sub-directories:
+<ul>
+<li> Genotypes
+<li> Pedigree
+</ul>
+
+
+## Transforming the Genotypes in 012 format to plink format
+
+To perfome this I used two codes
+
+1) Add "column names"
+```{bash eval=F}
+sed -i '1i id Call' genotypes.txt
+```
+
+
+2) Recode in python
+```{python eval=FALSE, python.reticulate = FALSE}
+filename = 'bruno_gntps.txt'
+
+outputFileOpen = open('genoplink.ped','w')
+
+
+recode = {'0':['C','C'] , '1':['A','C'] , '2':['A','A'] , '5':['0','0'] }
+for line in open(filename,'r'):
+    if 'Call' in line : continue
+
+
+    ids, call = line.strip().split()
+    genotypes = [ recode[geno012][0] +' '+ recode[geno012][1] for geno012 in call ]
+
+
+    outputFileOpen.write("%s %s %s %s %s %s %s\n" % ('HO', ids, '0','0','0','-9',' '.join(genotypes)) )
+
+```
+
+Now I have a folder called **/home/bambrozi/2_CORTISOL/Geno_files** with the file named **genoplink.ped**
+
+# GWAS
+
+## Checking with Phenotyped Animals also have Genotype
+```{r eval=FALSE}
+library(data.table)
+
+pheno <- read.csv("/home/bambrozi/2_CORTISOL/Data/data_clean.csv")
+ped <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv")
+geno <- fread("/home/bambrozi/2_CORTISOL/Geno_files/genoplink.ped")
+geno <- geno[,c("V2")]
+
+#Bringing cdn_id to my phenotype file
+#Generate a index with the match
+matching_indices <- match(pheno$ID, ped$elora_id)
+# Then, assign 'cdn_id' from 'ped' to 'pheno' where there are matches
+pheno$cdn_id <- ifelse(!is.na(matching_indices), ped$cdn_id[matching_indices], NA)
+
+#Making a phenotype file only with genotyped animals
+pheno_genotyped <- pheno[pheno$cdn_id %in% geno$V2,] 
+
+#check if all animals in this file are genotyped
+checkk <- pheno_genotyped$cdn_id %in% geno$V2
+sum(checkk)
+```
+
+
+## Generating a Phenotype file
+
+The phenotype file should have three columns: FID, Animal_id, Phenotype
+
+```{r eval=FALSE}
+HO <- rep("HO", 252)
+
+pheno_gwas <- as.data.frame(cbind(HO, pheno_genotyped$cdn_id, pheno_genotyped$T4Cortisol))
+
+colnames(pheno_gwas) <- c("FID", "cdn_id", "cortisol")
+
+pheno_gwas$cdn_id <-  as.numeric(pheno_gwas$cdn_id)
+pheno_gwas$cortisol <- round(as.numeric(pheno_gwas$cortisol),2)
+
+write.table(pheno_gwas, "/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt", quote = F, row.names = F, col.names = T)
+```
+
+## Adjusting the SNP_map to .map
+```{r eval=FALSE}
+map <- fread("/data/cgil/daiclu/6_Data/database/public_output/bruno/DGVsnpinfo.2404.ho")
+morgan <- data.frame(X0 = rep(0, 45101))
+mapa=as.data.frame(cbind(map$chr, map$snp_name, morgan$X0, map$location))
+head(mapa)
+write.table(x = mapa, file = "/home/bambrozi/2_CORTISOL/Geno_files/genoplink.map", row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE)
+```
+
+## Generating the bfiles
+
+```{r eval=FALSE}
+system("/home/local/bin/plink --cow --nonfounders --allow-no-sex --keep-allele-order --file /home/bambrozi/2_CORTISOL/Geno_files/genoplink --make-bed --out /home/bambrozi/2_CORTISOL/Geno_files/genoplink")
+```
+
+With the code above I generated the bfiles:
+<ul>genoplink.bed
+<li>genoplink.bim
+<li>genoplink.fam
+<li>genoplink.log
+<li>genoplink.nosex
+</ul>
+
+
+# Quality Control
+
+We ran the code below to perfom the QC
+
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/Geno_files/genoplink
+RESULT=/home/bambrozi/2_CORTISOL/Geno_files_after_QC/genoplink_clean
+
+/home/local/bin/plink \
+    --bfile ${DATA} \
+    --cow \
+    --allow-no-sex \
+    --hwe 1e-5 \
+    --maf 0.01 \
+    --geno 0.1 \
+    --mind 0.1 \
+    --keep-allele-order \
+    --make-bed \
+    --out ${RESULT}
+    
+```
+
+
+The server screen outcome is shown below.
+<img src="image18.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+After the Quality Control we ended up with
+
+<ul>
+<li> 252 samples
+<li> 42,278 variants (SNPs)
+</ul>
+
+# KING
+
+To check for duplicated individuals I performed the KINSHIP analysis using one script from Larissa Braga. Running the King Analysis on Plink.
+
+```{bash eval = FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/ONLY_GRASSHILL_AND_PHENO_after_QC/only_grasshill_and_pheno_clean
+RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING/result_king
+
+plink2 \
+    --bfile ${DATA} \
+    --chr-set 29 \
+    --make-king-table \
+    --out ${RESULT}
+```
+
+This is the output screen on terminal:
+
+<img src="image19.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# STOP MAY 2ND
+
+The table below is the output /home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING/result_king.kin0 and have pairwise comparisons between all individuals. 
+
+<img src="image46b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Now we should open in R and check for individuals with more than 0,354, to perform this we can use the code below, also provided by Larissa Braga:
+
+```{r eval=FALSE}
+setwd("/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING")
+
+relatedness="result_king.kin0" ## change accordingly!!
+
+library(data.table)
+
+print(relatedness)
+rel=fread(relatedness, h = T)
+head(rel)
+
+print("Individuals with different identifications above the cut off of 0.354:")
+dup=subset(rel, KINSHIP >= 0.354  & IID1!=IID2)
+print(dup)
+nrow(dup)
+
+```
+
+So the code above will provide this output if there is any duplicated individual.
+
+<img src="image47b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Than we need to run the following code to remove duplicated individuals
+```{r eval=FALSE}
+#checking if any individual appears in both columns IID1 and IID2
+all_INDV <- c(dup$IID1, dup$IID2)
+print(all_INDV)
+repeated_INDV <-  (anyDuplicated(all_INDV) > 0)
+
+#copying FID and IID of the column "1"
+library(tidyverse)
+toremove <- select(dup, "#FID1", "IID1")
+
+write.table(x = toremove, file = paste0(relatedness, ".dup"), row.names = FALSE, col.names = F, sep = "\t", quote = FALSE)
+```
+
+Now I have one file named **result_king.kin0.dup** that will be used on plink function --remove to remove this individuals from the dataset.
+
+```{bash eval=FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/ONLY_GRASSHILL_AND_PHENO_after_QC/only_grasshill_and_pheno_clean
+RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup
+REMOVE=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING/result_king.kin0.dup
+
+plink2 --bfile ${DATA} --remove ${REMOVE} --chr-set 29 --make-bed --out ${RESULT}
+
+```
+
+This screen is the terminal output for the code above:
+
+<img src="image48b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+```{r eval=FALSE}
+checking <-  fread("/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup.fam", sep = "\t", header = F)
+
+any(dup$IID1 %in% checking$V2)
+```
+This R code only double check if one of the repeated individuals were removed.
+
+
+The output of the bash script above is a set of files located in: **/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING**
+<ul>
+<li>only_grasshill_and_pheno_clean_rmvdup.bed 
+<li>only_grasshill_and_pheno_clean_rmvdup.bim 
+<li>only_grasshill_and_pheno_clean_rmvdup.fam 
+<li>only_grasshill_and_pheno_clean_rmvdup.log
+</ul>
+
+in these files the following individuals were removed: 
+<ul>
+<li>329655
+<li>354427
+<li>354437
+</ul>
+
+So the files **only_grasshill_and_pheno_clean_rmvdup** has already done the QC and removed duplicated individuals wraping up with 248 individuals:
+
+<ul>
+<li>194 Phenotype Nadia = 0
+<li>54 Phenotype Nadia = 1
+</ul>
+
+# Updating Phenotype file after QC
+
+```{r eval=FALSE}
+pheno <-  read.table("/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_1.txt", header = T)
+
+# Subset pheno based on animal_id_int present in checking$V2
+pheno_update <- pheno[pheno$animal_id_int %in% checking$V2, ]
+
+table(pheno_update$days_dry_1)
+
+write.table(pheno_update, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_1_afterQC_K.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+```
+
+
+# PCA
+
+Now before performing the PCA analysis we need to change the FID for those individuals that has phenotype = **1** for Nadia.
+
+First, in R, we need to generate the "Recode File"
+
+```{r eval=FALSE}
+library(tidyverse)
+
+# Create a copy of pheno_update
+pheno_update_modified <- pheno_update
+
+# Change FID to "ND" where days_dry_1 is equal to 1
+pheno_update_modified$FID[pheno_update_modified$days_dry_1 == 1] <- "ND"
+
+# Create a new data frame with the desired columns
+recode_file <- data.frame(
+  old_V1 = pheno_update$FID,
+  old_V2 = pheno_update$animal_id_int,
+  new_V1 = pheno_update_modified$FID,
+  new_V2 = pheno_update_modified$animal_id_int
+)
+
+write.table(recode_file, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/recode_for_PCA.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = F)
+
+```
+
+
+And then, run this script on Plink to change the FID for those individuals Nadia = 1
+```{bash eval = F}
+#!/bin/bash
+
+DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup
+RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/imput_pca
+FIDMAP=/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/recode_for_PCA.txt
+
+/home/local/bin/plink --bfile ${DATA} --update-ids ${FIDMAP} --chr-set 29 --make-bed --out ${RESULT}
+
+```
+
+Now we are gonna running the PCA....
+
+
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/imput_pca
+RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/pca_result
+
+plink \
+    --bfile ${DATA} \
+    --keep-allele-order \
+    --chr-set 29 \
+    --pca \
+    --out ${RESULT}
+
+```
+
+The PCA output:
+
+<img src="image49b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+### PCA Plot
+
+After generate the Eigenvalues and Eigenvectors I used the code below to generate the PCA Plot
+
+```{r eval=FALSE}
+setwd("/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA")
+
+library(ggplot2) 
+library(tidyverse)
+
+##
+# Visualize PCA results
+###
+
+# read in result files
+eigenValues <- read_delim("pca_result.eigenval", delim = " ", col_names = F)
+eigenVectors <- read_delim("pca_result.eigenvec", delim = " ", col_names = F)
+
+## Proportion of variation captured by each vector
+eigen_percent <- round((eigenValues / (sum(eigenValues))*100), 2)
+
+
+# PCA plot
+png("pca-plink.eng.png", width=5, height=5, units="in", res=300)
+ggplot(data = eigenVectors) +
+  geom_point(mapping = aes(x = X3, y = X4, color = X1, shape = X1), size = 1, alpha = 1, show.legend = TRUE ) +
+  geom_hline(yintercept = 0, linetype="dotted") +
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(       x = paste0("Principal component 1 (",eigen_percent[1,1]," %)"),
+              y = paste0("Principal component 2 (",eigen_percent[2,1]," %)"),
+              colour = "Animals", shape = "Animals") +
+  scale_color_manual(values = c("EN" = "gray", "ND" = "darkred")) +  # Set colors for EN and ND
+  theme_minimal()
+dev.off()
+
+```
+
+<img src="image50b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# GWAS on GCTA
+
+
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup
+RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/GWAS_result
+PHENO=/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_1_afterQC_K.txt
+
+/home/local/bin/gcta \
+    --bfile ${DATA} \
+    --mlma-loco \
+    --pheno ${PHENO} \
+    --autosome-num 29 \
+    --autosome \
+    --out ${RESULT}
+
+```
+
+This is te output from the code above:
+
+<img src="image51b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+## Manhattan Plot - Bonferroni 
+
+
+```{r eval=FALSE}
+gwas<- read.table(file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/GWAS_result.loco.mlma", 
+                  head=T, stringsAsFactors = F)
+gwas$Chr<- as.factor(gwas$Chr)
+gwas$logP<- -log10(gwas$p)
+rmv<- which(gwas$logP == "NaN")
+if (length(rmv) >=1) {gwas <- gwas[-rmv,]}
+bonf<- -log10(0.05/nrow(gwas))
+
+library(GHap)
+ghap.manhattan(data=gwas,chr="Chr", bp="bp", y="logP", type="p", pch = 20, 
+               cex=1, lwd=1, ylab="", xlab="Chromossomes", 
+               main="GWAS NADIA", backcolor="#F5EFE780", chr.ang=0,)
+abline(h=(bonf), col="red2")
+legend("topleft", col="red2", lwd=2, c("Bonferroni correction"), bty="n")
+
+```
+
+The code above creates a Manhattam Plot, the correction for multiple test is the Bonferroni correction
+
+<img src="image52b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+The code below will save information of Significant SNP.
+```{r eval=FALSE}
+library(tidyverse)
+
+SNP_sig_bonf <- filter(gwas, logP > bonf)
+write.table(SNP_sig_bonf, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/SNP_sig_Bonf.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+```
+
+Below we can see the 1 significant SNP for Bonferroni correction.
+
+<img src="image61b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+## FDR
+
+
+```{r eval=FALSE}
+
+gwas$bh <- p.adjust(gwas$p, method = "BH") #FDR 
+
+```
+
+The code below will create a file with the significant snp for FDR-BH
+
+```{r eval=FALSE}
+SNP_sig_BH <- filter(gwas, bh < 0.05)
+write.table(SNP_sig_BH, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/SNP_sig_BH.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+```
+
+As outcome we can see that in adition to the 3 significant SNP after Bonferroni correction, we add one more with FDR-BH method.
+
+<img src="image60b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# qqPlot
+
+I performed the qqPlot analysis using the code below:
+
+```{r eval=FALSE}
+gwas<- read.table("GWAS_result.loco.mlma", h=T)
+ps<- gwas$p
+inflation <- function(ps) {
+  chisq <- qchisq(1 - ps, 1)
+  lambda <- median(chisq) / qchisq(0.5, 1)
+  lambda
+}
+# Calculating the lambda -  the lambda statistic should be close to 1 if
+#the points fall within the expected range, or greater than one if 
+# the observed p-values are more significant than expected.
+inflation(ps)
+
+bonf<- -log10(0.05/nrow(gwas))
+
+gwas$log<- -log10(gwas$p)
+
+gg_qqplot <- function(ps, ci = 0.95) {
+  n  <- length(ps)
+  df <- data.frame(
+    observed = -log10(sort(ps)),
+    expected = -log10(ppoints(n)),
+    clower   = -log10(qbeta(p = (1 - ci) / 2, shape1 = 1:n, shape2 = n:1)),
+    cupper   = -log10(qbeta(p = (1 + ci) / 2, shape1 = 1:n, shape2 = n:1))
+  )
+  log10Pe <- expression(paste("Expected -log"[10], plain(P)))
+  log10Po <- expression(paste("Observed -log"[10], plain(P)))
+  ggplot(df) +
+    geom_ribbon(
+      mapping = aes(x = expected, ymin = clower, ymax = cupper),
+      alpha = 0.1
+    ) +
+    geom_point(aes(expected, observed), shape = 1, size = 3) +
+    geom_abline(intercept = 0, slope = 1, alpha = 0.5) +
+    # geom_line(aes(expected, cupper), linetype = 2, size = 0.5) +
+    # geom_line(aes(expected, clower), linetype = 2, size = 0.5) +
+    xlab(log10Pe) +
+    ylab(log10Po)
+}
+
+## plot -----
+gg_qqplot(ps) +
+  theme_bw(base_size = 24) +
+  annotate(
+    geom = "text",
+    x = -Inf,
+    y = Inf,
+    hjust = -0.15,
+    vjust = 1 + 0.15 * 3,
+    label = sprintf("λ = %.2f", inflation(ps)),
+    size = 8
+  ) +
+  theme(
+    axis.ticks = element_line(size = 0.5),
+    panel.grid = element_blank()
+    # panel.grid = element_line(size = 0.5, color = "grey80")
+  )
+
+```
+
+The outcome is the qqplot below, and the lambda value is **$\lambda$ = 1.03**
+
+<img src="image69b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# GALLO 
+
