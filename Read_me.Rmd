@@ -338,8 +338,6 @@ This is the output screen on terminal:
 
 <img src="image19.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-# STOP MAY 2ND
-
 The table below is the output <span style="color: blue;">/home/bambrozi/2_CORTISOL/Geno_files_after_KING/result_king.kin0</span> and have pairwise comparisons between all individuals. 
 
 <img src="image20.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
@@ -665,7 +663,7 @@ The GALLO output are bellow:
 **FOR QTLs**
 <img src="image30.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-#GPROFILER
+# GPROFILER
 
 online version: <https://biit.cs.ut.ee/gprofiler/gost>
 
@@ -751,6 +749,40 @@ write.table(sig_enrich, file = "/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich_
 
 ```
 
-The output of this enrichmet has this appearence:
+Below we can se the significant output of this enrichmet:
 
-<img src="image31.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gene_enrich_sig.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+Now I'm gonna make a pie chart with the categories
+```{r eval=FALSE}
+# Load required library
+library(ggplot2)
+
+# Assuming sig_enrich$Category contains the categories
+category_counts <- table(sig_enrich$Category)
+
+# Create a pie chart
+pie_chart <- ggplot(data = NULL, aes(x = factor(1), fill = names(category_counts), y = as.numeric(category_counts))) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Distribution of Categories",
+       x = NULL,
+       y = NULL,
+       fill = "Category") +
+  theme_void() +
+  theme(legend.position = "right")
+
+# Print the pie chart
+print(pie_chart)
+
+```
+
+<img src="image32.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
