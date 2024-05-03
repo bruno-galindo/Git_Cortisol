@@ -340,14 +340,14 @@ This is the output screen on terminal:
 
 # STOP MAY 2ND
 
-The table below is the output /home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING/result_king.kin0 and have pairwise comparisons between all individuals. 
+The table below is the output <span style="color: blue;">/home/bambrozi/2_CORTISOL/Geno_files_after_KING/result_king.kin0</span> and have pairwise comparisons between all individuals. 
 
-<img src="image46b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image20.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 Now we should open in R and check for individuals with more than 0,354, to perform this we can use the code below, also provided by Larissa Braga:
 
 ```{r eval=FALSE}
-setwd("/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING")
+setwd("/home/bambrozi/2_CORTISOL/Geno_files_after_KING")
 
 relatedness="result_king.kin0" ## change accordingly!!
 
@@ -366,127 +366,19 @@ nrow(dup)
 
 So the code above will provide this output if there is any duplicated individual.
 
-<img src="image47b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image21.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-Than we need to run the following code to remove duplicated individuals
-```{r eval=FALSE}
-#checking if any individual appears in both columns IID1 and IID2
-all_INDV <- c(dup$IID1, dup$IID2)
-print(all_INDV)
-repeated_INDV <-  (anyDuplicated(all_INDV) > 0)
+**We do not have any duplicated individual**
 
-#copying FID and IID of the column "1"
-library(tidyverse)
-toremove <- select(dup, "#FID1", "IID1")
+So the file to be used are those in the directory <span style="color: blue;">/home/bambrozi/2_CORTISOL/Geno_files_after_QC</span>
 
-write.table(x = toremove, file = paste0(relatedness, ".dup"), row.names = FALSE, col.names = F, sep = "\t", quote = FALSE)
-```
+>files:genoplink_clean
 
-Now I have one file named **result_king.kin0.dup** that will be used on plink function --remove to remove this individuals from the dataset.
-
-```{bash eval=FALSE}
-#!/bin/bash
-
-DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/ONLY_GRASSHILL_AND_PHENO_after_QC/only_grasshill_and_pheno_clean
-RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup
-REMOVE=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/KING/result_king.kin0.dup
-
-plink2 --bfile ${DATA} --remove ${REMOVE} --chr-set 29 --make-bed --out ${RESULT}
-
-```
-
-This screen is the terminal output for the code above:
-
-<img src="image48b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-```{r eval=FALSE}
-checking <-  fread("/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup.fam", sep = "\t", header = F)
-
-any(dup$IID1 %in% checking$V2)
-```
-This R code only double check if one of the repeated individuals were removed.
-
-
-The output of the bash script above is a set of files located in: **/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING**
-<ul>
-<li>only_grasshill_and_pheno_clean_rmvdup.bed 
-<li>only_grasshill_and_pheno_clean_rmvdup.bim 
-<li>only_grasshill_and_pheno_clean_rmvdup.fam 
-<li>only_grasshill_and_pheno_clean_rmvdup.log
-</ul>
-
-in these files the following individuals were removed: 
-<ul>
-<li>329655
-<li>354427
-<li>354437
-</ul>
-
-So the files **only_grasshill_and_pheno_clean_rmvdup** has already done the QC and removed duplicated individuals wraping up with 248 individuals:
-
-<ul>
-<li>194 Phenotype Nadia = 0
-<li>54 Phenotype Nadia = 1
-</ul>
-
-# Updating Phenotype file after QC
-
-```{r eval=FALSE}
-pheno <-  read.table("/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_1.txt", header = T)
-
-# Subset pheno based on animal_id_int present in checking$V2
-pheno_update <- pheno[pheno$animal_id_int %in% checking$V2, ]
-
-table(pheno_update$days_dry_1)
-
-write.table(pheno_update, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_1_afterQC_K.txt", 
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
-
-```
-
+After Quality Control we didn't lost any animal, so we don't need to update our phenotype file
 
 # PCA
 
 Now before performing the PCA analysis we need to change the FID for those individuals that has phenotype = **1** for Nadia.
-
-First, in R, we need to generate the "Recode File"
-
-```{r eval=FALSE}
-library(tidyverse)
-
-# Create a copy of pheno_update
-pheno_update_modified <- pheno_update
-
-# Change FID to "ND" where days_dry_1 is equal to 1
-pheno_update_modified$FID[pheno_update_modified$days_dry_1 == 1] <- "ND"
-
-# Create a new data frame with the desired columns
-recode_file <- data.frame(
-  old_V1 = pheno_update$FID,
-  old_V2 = pheno_update$animal_id_int,
-  new_V1 = pheno_update_modified$FID,
-  new_V2 = pheno_update_modified$animal_id_int
-)
-
-write.table(recode_file, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/recode_for_PCA.txt", 
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = F)
-
-```
-
-
-And then, run this script on Plink to change the FID for those individuals Nadia = 1
-```{bash eval = F}
-#!/bin/bash
-
-DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup
-RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/imput_pca
-FIDMAP=/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA/recode_for_PCA.txt
-
-/home/local/bin/plink --bfile ${DATA} --update-ids ${FIDMAP} --chr-set 29 --make-bed --out ${RESULT}
-
-```
-
-Now we are gonna running the PCA....
 
 
 ```{bash eval=F}
@@ -506,14 +398,14 @@ plink \
 
 The PCA output:
 
-<img src="image49b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image22.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 ### PCA Plot
 
 After generate the Eigenvalues and Eigenvectors I used the code below to generate the PCA Plot
 
 ```{r eval=FALSE}
-setwd("/home/bambrozi/Extrm_ARS1_GrassHill_1/PCA")
+setwd("/home/bambrozi/2_CORTISOL/PCA")
 
 library(ggplot2) 
 library(tidyverse)
@@ -533,19 +425,29 @@ eigen_percent <- round((eigenValues / (sum(eigenValues))*100), 2)
 # PCA plot
 png("pca-plink.eng.png", width=5, height=5, units="in", res=300)
 ggplot(data = eigenVectors) +
-  geom_point(mapping = aes(x = X3, y = X4, color = X1, shape = X1), size = 1, alpha = 1, show.legend = TRUE ) +
+  geom_point(mapping = aes(x = X3, y = X4), color = "red", shape = 19, size = 1, alpha = 1) +
   geom_hline(yintercept = 0, linetype="dotted") +
   geom_vline(xintercept = 0, linetype="dotted") +
-  labs(       x = paste0("Principal component 1 (",eigen_percent[1,1]," %)"),
-              y = paste0("Principal component 2 (",eigen_percent[2,1]," %)"),
-              colour = "Animals", shape = "Animals") +
-  scale_color_manual(values = c("EN" = "gray", "ND" = "darkred")) +  # Set colors for EN and ND
+  labs(x = paste0("Principal component 1 (", eigen_percent[1,1], " %)"),
+       y = paste0("Principal component 2 (", eigen_percent[2,1], " %)")) +
   theme_minimal()
 dev.off()
 
+
+# PCA plot with animal ids
+png("pca-plink.eng.animals_id.png", width=50, height=50, units="in", res=300)
+ggplot(data = eigenVectors) +
+  geom_point(mapping = aes(x = X3, y = X4), color = "red", shape = 19, size = 5, alpha = 1) +
+  geom_text(mapping = aes(x = X3, y = X4, label = X2), size = 2, hjust = 0, vjust = 0) +  # Add labels for animal IDs
+  geom_hline(yintercept = 0, linetype="dotted") +
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(x = paste0("Principal component 1 (", eigen_percent[1,1], " %)"),
+       y = paste0("Principal component 2 (", eigen_percent[2,1], " %)")) +
+  theme_minimal()
+dev.off()
 ```
 
-<img src="image50b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image23.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 # GWAS on GCTA
 
@@ -553,9 +455,9 @@ dev.off()
 ```{bash eval=F}
 #!/bin/bash
 
-DATA=/home/bambrozi/Extrm_ARS1_GrassHill_1/GENOTYPES/After_KING/only_grasshill_and_pheno_clean_rmvdup
-RESULT=/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/GWAS_result
-PHENO=/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_1_afterQC_K.txt
+DATA=/home/bambrozi/2_CORTISOL/Geno_files_after_QC/genoplink_clean
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/GWAS_result
+PHENO=/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt
 
 /home/local/bin/gcta \
     --bfile ${DATA} \
@@ -569,13 +471,13 @@ PHENO=/home/bambrozi/Extrm_ARS1_GrassHill_1/PHENOTYPE/Pheno_Nadia_onlyGrassHill_
 
 This is te output from the code above:
 
-<img src="image51b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image24.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 ## Manhattan Plot - Bonferroni 
 
 
 ```{r eval=FALSE}
-gwas<- read.table(file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/GWAS_result.loco.mlma", 
+gwas<- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/GWAS_result.loco.mlma", 
                   head=T, stringsAsFactors = F)
 gwas$Chr<- as.factor(gwas$Chr)
 gwas$logP<- -log10(gwas$p)
@@ -586,7 +488,7 @@ bonf<- -log10(0.05/nrow(gwas))
 library(GHap)
 ghap.manhattan(data=gwas,chr="Chr", bp="bp", y="logP", type="p", pch = 20, 
                cex=1, lwd=1, ylab="", xlab="Chromossomes", 
-               main="GWAS NADIA", backcolor="#F5EFE780", chr.ang=0,)
+               main="GWAS Cortisol", backcolor="#F5EFE780", chr.ang=0,)
 abline(h=(bonf), col="red2")
 legend("topleft", col="red2", lwd=2, c("Bonferroni correction"), bty="n")
 
@@ -594,21 +496,20 @@ legend("topleft", col="red2", lwd=2, c("Bonferroni correction"), bty="n")
 
 The code above creates a Manhattam Plot, the correction for multiple test is the Bonferroni correction
 
-<img src="image52b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image25.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 The code below will save information of Significant SNP.
 ```{r eval=FALSE}
 library(tidyverse)
 
 SNP_sig_bonf <- filter(gwas, logP > bonf)
-write.table(SNP_sig_bonf, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/SNP_sig_Bonf.txt", 
+write.table(SNP_sig_bonf, file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf.txt", 
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
-
 ```
 
 Below we can see the 1 significant SNP for Bonferroni correction.
 
-<img src="image61b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image26.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 
 ## FDR
@@ -624,13 +525,14 @@ The code below will create a file with the significant snp for FDR-BH
 
 ```{r eval=FALSE}
 SNP_sig_BH <- filter(gwas, bh < 0.05)
-write.table(SNP_sig_BH, file = "/home/bambrozi/Extrm_ARS1_GrassHill_1/GWAS/SNP_sig_BH.txt", 
+write.table(SNP_sig_BH, file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_BH.txt", 
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
 ```
 
-As outcome we can see that in adition to the 3 significant SNP after Bonferroni correction, we add one more with FDR-BH method.
+As outcome we can see that the FDR-BH method didn't increase the number of significant SNP.
 
-<img src="image60b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image27.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
 
 # qqPlot
 
@@ -698,7 +600,157 @@ gg_qqplot(ps) +
 
 The outcome is the qqplot below, and the lambda value is **$\lambda$ = 1.03**
 
-<img src="image69b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image28.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 # GALLO 
 
+```{r eval=FALSE}
+#import a QTL annotation file
+qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTLdb_release53_cattleARS_UCD1.gff.gz",file_type="gff")
+
+#import a gene annotation file
+gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
+
+#import MARKER files = the GWAS output
+gwas <- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf.txt", 
+                   head=T, stringsAsFactors = F)
+
+# Assuming "gwas" is your dataframe
+gwas <- subset(gwas, select = c(Chr, SNP, bp))
+
+
+colnames(gwas) <- c("CHR","SNP", "BP")
+
+
+#FINDING GENES AND QTLs ARROUND THE MARKER
+
+#FINDING GENES
+out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2, 
+                                            marker_file= gwas, 
+                                            method = "gene",
+                                            marker = "snp", 
+                                            interval = 50000, 
+                                            nThreads = NULL)
+
+write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/out_genes_50k.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+#FINDING QTLs
+
+out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2, 
+                                          marker_file= gwas, 
+                                          method = "qtl",
+                                          marker = "snp", 
+                                          interval = 50000, 
+                                          nThreads = NULL)
+
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/out_qtl_60k.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+```
+
+
+Dowloading the .gtf file from Ensembl
+<https://useast.ensembl.org/info/data/ftp/index.html>
+
+Downloading the .gff file from AnimalQTLdb
+<https://www.animalgenome.org/cgi-bin/QTLdb/index>
+
+
+The GALLO output are bellow:
+
+**For GENES**
+<img src="image29.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**FOR QTLs**
+<img src="image30.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+#GPROFILER
+
+online version: <https://biit.cs.ut.ee/gprofiler/gost>
+
+I got a script from Julia Rodrigues about the R package GPROFILER to perform an enrichment of my Genes.
+```{r eval=FALSE}
+### enriquecimento genico
+#install.packages("gprofiler2")
+library(gprofiler2)
+
+#Para conferir a lista de organism -> https://biit.cs.ut.ee/gprofiler/page/organism-list
+
+#Obs: eu entro com os ids ENSOAR...
+query <- read.table ("/home/bambrozi/2_CORTISOL/GALLO/out_genes_50k.txt", header = T)
+query <- query[,c("gene_id")]
+
+gene_enrich <- gost(
+  query,
+  organism = "btaurus", 
+  ordered_query = FALSE,
+  multi_query = FALSE,
+  significant = TRUE,
+  exclude_iea = FALSE,
+  measure_underrepresentation = FALSE,
+  evcodes = TRUE,
+  user_threshold = 0.10,
+  correction_method = c("fdr"),
+  domain_scope = c("annotated"),
+  numeric_ns = "",
+  sources = NULL,
+  as_short_link = FALSE,
+  highlight = FALSE
+)
+
+
+#str(gene_enrich) # para ver o formato dos meus dados
+
+#selecionando apenas as informações da lista que me interessam para fazer meu data.frame 
+result_enrich <- data.frame(gene_enrich$result)
+result_enrich <- data.frame(Category = result_enrich$source,
+                            ID = result_enrich$term_id,
+                            Term = result_enrich$term_name,
+                            adj_pvalue = result_enrich$p_value,
+                            id_ensembl = result_enrich$intersection)
+
+write.table(result_enrich,"/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich.txt", col.names=TRUE, row.names=FALSE, sep="\t", quote=F)
+
+
+
+gostplot(
+  gene_enrich,
+  capped = TRUE,
+  interactive = T,
+  pal = c(`GO:MF` = "#dc3912", `GO:BP` = "#ff9900", `GO:CC` = "#109618", KEGG =
+            "#dd4477", REAC = "#3366cc", WP = "#0099c6", TF = "#5574a6", MIRNA = "#22aa99", HPA =
+            "#6633cc", CORUM = "#66aa00", HP = "#990099")
+)
+
+#to use this function to save, it is necesssary choose interactive =F in the previous step
+#to use this function create a object "publish_gostplot" in the previous step.
+publish_gostplot(
+  gostplot_obj,
+  highlight_terms = NULL,
+  filename = NULL,
+  width = NA,
+  height = NA
+)
+
+#CREATE A TABLE
+
+publish_gosttable(
+  gene_enrich,
+  highlight_terms = NULL,
+  use_colors = TRUE,
+  show_columns = c("source", "term_name", "term_size", "intersection_size"),
+  filename = "result_table.pdf",
+  ggplot = TRUE
+)
+
+#creating a GO list to use in CATEGORIZER.
+library(tidyverse)
+sig_enrich <- filter(result_enrich, adj_pvalue < 0.05)
+write.table(sig_enrich, file = "/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich_sig.txt", row.names = FALSE, quote = F, col.names = FALSE)
+
+```
+
+The output of this enrichmet has this appearence:
+
+<img src="image31.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
