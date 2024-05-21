@@ -531,9 +531,9 @@ As outcome we can see that the FDR-BH method didn't increase the number of signi
 
 <img src="image27.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-## Corrected Bonferroni
+## Corrected Bonferroni for genome independent segments
 
-Now we are going to apply a corretion for multiple testing modifing the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
+Now we are going to apply a correction for multiple testing modifying the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
 
 ```{r eval=FALSE}
 Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
@@ -661,6 +661,8 @@ The outcome is the qqplot below, and the lambda value is **$\lambda$ = 1.03**
 # GALLO 
 
 ```{r eval=FALSE}
+# GALLO
+
 #import a QTL annotation file
 qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTLdb_release53_cattleARS_UCD1.gff.gz",file_type="gff")
 
@@ -668,7 +670,7 @@ qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTL
 gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
 
 #import MARKER files = the GWAS output
-gwas <- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf.txt", 
+gwas <- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg.txt", 
                    head=T, stringsAsFactors = F)
 
 # Assuming "gwas" is your dataframe
@@ -691,6 +693,8 @@ out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2,
 write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/out_genes_50k.txt", 
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
 
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/out_genes_50k.csv")
+
 #FINDING QTLs
 
 out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2, 
@@ -700,8 +704,14 @@ out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2,
                                           interval = 50000, 
                                           nThreads = NULL)
 
-write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/out_qtl_60k.txt", 
+
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/out_qtl_50k.txt", 
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+library(tidyverse)
+out.qtl.clean <- select(out.qtl, c("CHR", "SNP", "BP", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/out_qtl_50k_clean.csv")
+
 
 ```
 
@@ -728,7 +738,7 @@ knitr::kable(data)
 **FOR QTLs**
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_50k.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_50k_clean.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -760,7 +770,7 @@ plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
 <img src="image36.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
 **Health**
-<img src="image37.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+<img src="image38.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
 ## QTL enrichment on GALLO
 
