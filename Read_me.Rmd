@@ -531,6 +531,64 @@ As outcome we can see that the FDR-BH method didn't increase the number of signi
 
 <img src="image27.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+## Corrected Bonferroni
+
+Now we are going to apply a corretion for multiple testing modifing the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
+
+```{r eval=FALSE}
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+gwas<- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/GWAS_result.loco.mlma", 
+                  head=T, stringsAsFactors = F)
+
+gwas$Chr<- as.factor(gwas$Chr)
+gwas$logP<- -log10(gwas$p)
+rmv<- which(gwas$logP == "NaN")
+if (length(rmv) >=1) {gwas <- gwas[-rmv,]}
+
+bonf<- -log10(0.05/Me)
+
+library(GHap)
+ghap.manhattan(data=gwas,chr="Chr", bp="bp", y="logP", type="p", pch = 20, 
+               cex=1, lwd=1, ylab="", xlab="Chromossomes", 
+               main="GWAS Cortisol", backcolor="#F5EFE780", chr.ang=0,)
+abline(h=(bonf), col="red2")
+legend("topleft", col="red2", lwd=2, c("Bonferroni corr. for ind. segments"), bty="n")
+
+
+library(tidyverse)
+
+SNP_sig_bonf_ind_seg <- filter(gwas, logP > bonf)
+write.table(SNP_sig_bonf_ind_seg, file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+```
+
+<img src="image33.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Below we can find the list of significant SNPs after the correction for Multiple Testing
+
+<img src="image34.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 # qqPlot
 
@@ -658,10 +716,77 @@ Downloading the .gff file from AnimalQTLdb
 The GALLO output are bellow:
 
 **For GENES**
-<img src="image29.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_50k.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
 
 **FOR QTLs**
-<img src="image30.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_50k.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+## QTL annotation on GALLO
+
+**QTL type**
+```{r eval=FALSE}
+#GALLO
+par(mar=c(8,20,8,8))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1)
+```
+
+<img src="image35.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**QTL type**
+```{r eval=FALSE}
+#GALLO
+par(mar=c(10,20,10,10))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Reproduction")
+
+par(mar=c(10,20,10,10))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
+```
+
+**Reproduction**
+<img src="image36.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Health**
+<img src="image37.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+## QTL enrichment on GALLO
+
+```{r eval=FALSE}
+#GALLO
+#QTL enrichment analysis 
+out.enrich_qtl <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                       qtl_file= out.qtl, qtl_type = "Name",
+                       enrich_type = "chromosome", chr.subset = NULL, 
+                       padj = "fdr",nThreads = 2)
+
+write.csv(out.enrich_qtl,"/home/bambrozi/2_CORTISOL/GALLO/out_enrich_qtl.csv")
+ 
+```
+
+Bellow we can realize that any QTL remain after the enrichment analysis.
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
 
 # GPROFILER
 
@@ -746,10 +871,10 @@ publish_gosttable(
 library(tidyverse)
 sig_enrich <- filter(result_enrich, adj_pvalue < 0.05)
 write.table(sig_enrich, file = "/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich_sig.txt", row.names = FALSE, quote = F, col.names = FALSE)
-
+write.csv(sig_enrich, file = "/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich_sig.csv")
 ```
 
-Below we can se the significant output of this enrichmet:
+Below we can se the significant terms of this enrichment (output):
 
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
@@ -785,4 +910,4 @@ print(pie_chart)
 
 ```
 
-<img src="image32.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+<img src="image37.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
