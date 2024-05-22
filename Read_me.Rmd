@@ -1,10 +1,12 @@
 ---
 title: "Read_me"
 author: "Galindo, B. A"
-date: "2024-04-29"
+date: "2024-05-22"
 output:
   html_document:
+    css: styles.css
     toc: true
+    number_sections: true
   pdf_document:
     toc: true
 ---
@@ -398,7 +400,7 @@ The PCA output:
 
 <img src="image22.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-### PCA Plot
+## PCA Plot
 
 After generate the Eigenvalues and Eigenvectors I used the code below to generate the PCA Plot
 
@@ -962,3 +964,110 @@ print(pie_chart)
 ```
 
 <img src="image37.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+# Haplotype Blocks
+
+First I need to generate the .ped file
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/Geno_files_after_QC/genoplink_clean
+RESULT=/home/bambrozi/2_CORTISOL/HAPLOBLOCK/inter_file
+
+plink \
+    --bfile ${DATA} \
+    --cow \
+    --recode \
+    --out ${RESULT}
+```
+
+
+Second, is necessary to convert the .ped file to Linkage format:
+
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/HAPLOBLOCK/inter_file
+RESULT=/home/bambrozi/2_CORTISOL/HAPLOBLOCK/hapblock_in
+
+plink \
+    --file ${DATA} \
+    --cow \
+    --recode HV \
+    --out ${RESULT}
+```
+
+The code above will generate a pair of files **.ped** and **.info** for each chromosome
+
+I ran the **haploview** only for chromosome 11, 22, 26, 28 that are when the significant SNP are located.
+
+As the LD Plot bring the SNP ordered, first I looked at */home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg.txt*, to know the SNP position, and then compare with the **Check Markers** tab in the haploview <span style="background-color:yellow">SNP position</span>
+ x <span style="background-color:lightblue">SNP#</span> in plot
+ 
+ <img src="image51.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/marker_info_gwas_haploview.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<span style="color: red;">The two significant SNPs from chromosome 26 fell within a Haploblock</span>.
+
+**Chr 11** (SNP 680)
+<img src="image46.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Chr 22** (SNP 88)
+<img src="image47.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Chr 22** (SNP 762)
+<img src="image48.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Chr 26** (SNP 296 and 297)
+<img src="image49.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Chr 28** (SNP 701)
+<img src="image50.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+
+## BLOCK 10 in Chr 26
+
+As we found an haploblock on chromosome 26 I decided take a look inside this block. So, on Haploview I checked the name and position of the first SNP of this block (292) and the last (300).
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/Block10_chr26_onlysnp.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+Then I checked on **NCBI's Genome Data Viewer** which genes are inside this block, adding **50k before** the first SNP and **50K after** the last SNP.
+
+This interval has 426,069bp and has this genes inside:
+
+<ul>
+<li>DNTT
+<li>OPALIN
+<li>TLL2
+<li>TM9SF3
+<li>PIK3AP1
+</ul>
+
+As you can see in the image below:
+
+<img src="image52.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+
+The genes *TLL2*, *TM9SF3* and *PIK3AP1* already were in the gene list from GALLO, but the genes **DNTT** and **OPALIN** were new!
+
+I performed a GPROFILER analysis only for these genes spotted in this Block 10.
+
+<img src="image53.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
