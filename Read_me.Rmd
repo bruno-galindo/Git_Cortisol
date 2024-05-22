@@ -777,26 +777,80 @@ plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
 ```{r eval=FALSE}
 #GALLO
 #QTL enrichment analysis 
-out.enrich_qtl <-qtl_enrich(qtl_db= qtl_UCD1_2, 
-                       qtl_file= out.qtl, qtl_type = "Name",
-                       enrich_type = "chromosome", chr.subset = NULL, 
-                       padj = "fdr",nThreads = 2)
+out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "Name",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
 
-write.csv(out.enrich_qtl,"/home/bambrozi/2_CORTISOL/GALLO/out_enrich_qtl.csv")
+
+# Sorting the dataframe in ascending order of adj.pval
+sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
+
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/out_enrich_qtl_genome_name.csv")
+
+out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "QTL_type",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/out_enrich_qtl_genome_type.csv")
+
+#Plots
+
+#Name
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL," - ","CHR",out.enrich_qtl_name$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered<-out.enrich_qtl_name[which(out.enrich_qtl_name$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+QTLenrich_plot(out.enrich.filtered, x="ID", pval="adj.pval")
+
+
+#Type
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL," - ","CHR",out.enrich_qtl_type$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered_type<-out.enrich_qtl_type[which(out.enrich_qtl_type$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
+
+
  
 ```
 
-Bellow we can realize that any QTL remain after the enrichment analysis.
+**QTL Enrichment outcomes**
 
+**Enrichment by name** (enrichment analysis will be performed for each trait individually)
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
 
 ```
 
+<img src="image39.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+<img src="image40.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
 # GPROFILER
 
@@ -823,7 +877,7 @@ gene_enrich <- gost(
   exclude_iea = FALSE,
   measure_underrepresentation = FALSE,
   evcodes = TRUE,
-  user_threshold = 0.10,
+  user_threshold = 0.05,
   correction_method = c("fdr"),
   domain_scope = c("annotated"),
   numeric_ns = "",
@@ -844,51 +898,14 @@ result_enrich <- data.frame(Category = result_enrich$source,
                             id_ensembl = result_enrich$intersection)
 
 write.table(result_enrich,"/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich.txt", col.names=TRUE, row.names=FALSE, sep="\t", quote=F)
-
-
-
-gostplot(
-  gene_enrich,
-  capped = TRUE,
-  interactive = T,
-  pal = c(`GO:MF` = "#dc3912", `GO:BP` = "#ff9900", `GO:CC` = "#109618", KEGG =
-            "#dd4477", REAC = "#3366cc", WP = "#0099c6", TF = "#5574a6", MIRNA = "#22aa99", HPA =
-            "#6633cc", CORUM = "#66aa00", HP = "#990099")
-)
-
-#to use this function to save, it is necesssary choose interactive =F in the previous step
-#to use this function create a object "publish_gostplot" in the previous step.
-publish_gostplot(
-  gostplot_obj,
-  highlight_terms = NULL,
-  filename = NULL,
-  width = NA,
-  height = NA
-)
-
-#CREATE A TABLE
-
-publish_gosttable(
-  gene_enrich,
-  highlight_terms = NULL,
-  use_colors = TRUE,
-  show_columns = c("source", "term_name", "term_size", "intersection_size"),
-  filename = "result_table.pdf",
-  ggplot = TRUE
-)
-
-#creating a GO list to use in CATEGORIZER.
-library(tidyverse)
-sig_enrich <- filter(result_enrich, adj_pvalue < 0.05)
-write.table(sig_enrich, file = "/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich_sig.txt", row.names = FALSE, quote = F, col.names = FALSE)
-write.csv(sig_enrich, file = "/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich_sig.csv")
+write.csv(result_enrich,"/home/bambrozi/2_CORTISOL/GPROFILER/gene_enrich.csv")
 ```
 
 Below we can se the significant terms of this enrichment (output):
 
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gene_enrich_sig.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gene_enrich.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -896,19 +913,43 @@ knitr::kable(data)
 ```
 
 
+
+
+
+## GPROFILER ON-LINE
+
+From the online version of GPROFILER i got the following results.
+
+**Legend**
+<img src="image41.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image43.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image42.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+
+Additionaly I perfomed a another version of this analysis but with **no eletronic GO annotation**
+
+<img src="image44.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image45.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+## Terms distribution Pie Chart
 Now I'm gonna make a pie chart with the categories
+
 ```{r eval=FALSE}
-# Load required library
 library(ggplot2)
 
 # Assuming sig_enrich$Category contains the categories
-category_counts <- table(sig_enrich$Category)
+category_counts <- table(result_enrich$Category)
 
 # Create a pie chart
 pie_chart <- ggplot(data = NULL, aes(x = factor(1), fill = names(category_counts), y = as.numeric(category_counts))) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar(theta = "y") +
-  labs(title = "Distribution of Categories",
+  labs(title = "Distribution among terms",
        x = NULL,
        y = NULL,
        fill = "Category") +
