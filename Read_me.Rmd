@@ -660,6 +660,36 @@ The outcome is the qqplot below, and the lambda value is **$\lambda$ = 1.03**
 
 <img src="image28.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+# VEP - Variant Effect Prediction
+
+After insert all **rsID** on VEP the summary is shown below:
+
+<img src="image54.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Bellow I'm gonna show the "genome view" for each SNP (variant) recovered from VEP:
+
+<span style="color: red;">**rs42217767**</span>
+*ps. this variant wasn't recovered automaticaly by VEP, so I typed the chr and position on the search area of the "genome viewer"* 
+<img src="image55.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs110031217**</span>
+<img src="image56.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs110991998**</span>
+<img src="image57.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs42089058**</span>
+<img src="image58.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs41644634**</span>
+<img src="image59.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs41567074**</span>
+<img src="image60.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+*ps. the unique reference genome available in the VEP is the ARS-UCD1.3, which is not a problem once it is working with the rsID, which for sure is our variant.*
+
+
 # GALLO 
 
 ```{r eval=FALSE}
