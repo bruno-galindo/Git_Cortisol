@@ -473,6 +473,8 @@ This is te output from the code above:
 
 <img src="image24.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+# 5%
+
 ## Manhattan Plot - Bonferroni 
 
 
@@ -1100,4 +1102,420 @@ The genes *TLL2*, *TM9SF3* and *PIK3AP1* already were in the gene list from GALL
 I performed a GPROFILER analysis only for these genes spotted in this Block 10.
 
 <img src="image53.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# 5 - 15%
+
+After check the outcome for 5% of significance for SNPs, Prof. Flávio asked me to carry out again considering the interval between 5% and 15% of significance.
+
+## Corrected Bonferroni for genome independent segments
+
+Now we are going to apply a correction for multiple testing modifying the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
+
+```{r eval=FALSE}
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+gwas<- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/GWAS_result.loco.mlma", 
+                  head=T, stringsAsFactors = F)
+
+gwas$Chr<- as.factor(gwas$Chr)
+gwas$logP<- -log10(gwas$p)
+rmv<- which(gwas$logP == "NaN")
+if (length(rmv) >=1) {gwas <- gwas[-rmv,]}
+
+bonf05<- -log10(0.05/Me)
+bonf15<- -log10(0.15/Me)
+
+library(GHap)
+ghap.manhattan(data=gwas,chr="Chr", bp="bp", y="logP", type="p", pch = 20, 
+               cex=1, lwd=1, ylab="", xlab="Chromossomes", 
+               main="GWAS Cortisol", backcolor="#F5EFE780", chr.ang=0,)
+abline(h=(bonf05), col="black")
+abline(h=(bonf15), col="red2")
+legend("topleft", inset=c(0.05, 0.05), col="red2", lwd=2, 
+       legend=c("15% sig. Bonferroni corr. for ind. segments"), bty="n")
+legend("topleft", inset=c(0.05, 0.10), col="black", lwd=2, 
+       legend=c("5% sig. Bonferroni corr. for ind. segments"), bty="n")
+
+library(tidyverse)
+
+SNP_sig_bonf_ind_seg_5_15 <- filter(gwas, logP > bonf15 & logP < bonf05)
+
+write.table(SNP_sig_bonf_ind_seg_5_15, file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg_5_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+write.csv(SNP_sig_bonf_ind_seg_5_15, file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg_5_15.csv")
+
+```
+
+<img src="image61.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Below we can find the list of significant SNPs after the correction for Multiple Testing
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/SNP_sig_Bonf_ind_seg_5_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+Generating a file with the GWAS output and rsID  
+
+```{r eval=FALSE}
+
+library(tidyverse)
+
+# Extracting SNP names to use in the SNPChimp
+SNP_NAMES <- SNP_sig_bonf_ind_seg_5_15 %>% pull(SNP)
+SNP_NAMES <- paste(SNP_NAMES, collapse = ", ")
+print(SNP_NAMES)
+
+# Opening the SNPChimp output in R
+rsID <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/SNPchimp_result_2857387610.tsv")
+rsID <- rsID[,c("rs","SNP_name")]
+
+#Merging in one file the GWAS output and rsID
+SNP_rsID_sig_bonf_ind_seg_5_15 <- merge(SNP_sig_bonf_ind_seg_5_15, rsID, by.x = "SNP", by.y = "SNP_name")
+SNP_rsID_sig_bonf_ind_seg_5_15 <- SNP_rsID_sig_bonf_ind_seg_5_15[, c("rs", "SNP", "Chr", "bp", "A1", "A2", "Freq", "b", "se", "p", "logP")]
+write.csv(SNP_rsID_sig_bonf_ind_seg_5_15, "/home/bambrozi/2_CORTISOL/GWAS/SNP_rsID_bonf_ind_seg_5_10.csv")
+```
+
+
+
+# qqPlot
+
+
+
+# VEP - Variant Effect Prediction
+
+After insert all **rsID** on VEP the summary is shown below:
+
+<img src="image69.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Bellow I'm gonna show the "genome view" for each SNP (variant) recovered from VEP:
+
+<span style="color: red;">**rs41624254**</span>
+<img src="image70.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs41632193**</span>
+<img src="image71.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs41632223**</span>
+<img src="image72.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs109751680**</span>
+<img src="image73.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs41577586**</span>
+<img src="image74.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs42590312**</span>
+<img src="image75.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs109578343**</span>
+<img src="image76.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+<span style="color: red;">**rs41648479**</span>
+<img src="image77.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+<span style="color: red;">**rs109888380**</span>
+<img src="image78.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+*ps. the unique reference genome available in the VEP is the ARS-UCD1.3, which is not a problem once it is working with the rsID, which for sure is our variant.*
+
+
+# GALLO 
+
+```{r eval=FALSE}
+# GALLO
+
+#import a QTL annotation file
+qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTLdb_release53_cattleARS_UCD1.gff.gz",file_type="gff")
+
+#import a gene annotation file
+gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
+
+#import MARKER files = the GWAS output
+gwas <- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg_5_15.txt", 
+                   head=T, stringsAsFactors = F)
+
+# Assuming "gwas" is your dataframe
+gwas <- subset(gwas, select = c(Chr, SNP, bp))
+
+
+colnames(gwas) <- c("CHR","SNP", "BP")
+
+
+#FINDING GENES AND QTLs ARROUND THE MARKER
+
+#FINDING GENES
+out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2, 
+                                            marker_file= gwas, 
+                                            method = "gene",
+                                            marker = "snp", 
+                                            interval = 50000, 
+                                            nThreads = NULL)
+
+write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_genes_50k_5_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_genes_50k_5_15.csv")
+
+#FINDING QTLs
+
+out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2, 
+                                          marker_file= gwas, 
+                                          method = "qtl",
+                                          marker = "snp", 
+                                          interval = 50000, 
+                                          nThreads = NULL)
+
+
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_qtl_50k_5_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+library(tidyverse)
+out.qtl.clean <- select(out.qtl, c("CHR", "SNP", "BP", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_qtl_50k_clean_5_15.csv")
+```
+
+
+Dowloading the .gtf file from Ensembl
+<https://useast.ensembl.org/info/data/ftp/index.html>
+
+Downloading the .gff file from AnimalQTLdb
+<https://www.animalgenome.org/cgi-bin/QTLdb/index>
+
+
+The GALLO output are bellow:
+
+**For GENES**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_50k_5_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+**FOR QTLs**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_50k_clean_5_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+## QTL annotation on GALLO
+
+**QTL type**
+```{r eval=FALSE}
+#GALLO
+par(mar=c(8,20,8,8))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1)
+```
+
+<img src="image62.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**QTL type**
+```{r eval=FALSE}
+#GALLO
+par(mar=c(10,20,10,10))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Reproduction")
+
+par(mar=c(10,20,10,10))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
+```
+
+**Reproduction**
+<img src="image63.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Health**
+<img src="image64.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+## QTL enrichment on GALLO
+
+```{r eval=FALSE}
+#GALLO
+#QTL enrichment analysis 
+out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "Name",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+
+# Sorting the dataframe in ascending order of adj.pval
+sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
+
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_enrich_qtl_genome_name_5_15.csv")
+
+out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "QTL_type",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_enrich_qtl_genome_type_5_15.csv")
+
+#Plots
+
+#Name
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL," - ","CHR",out.enrich_qtl_name$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered<-out.enrich_qtl_name[which(out.enrich_qtl_name$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+QTLenrich_plot(out.enrich.filtered, x="ID", pval="adj.pval")
+
+
+#Type
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL," - ","CHR",out.enrich_qtl_type$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered_type<-out.enrich_qtl_type[which(out.enrich_qtl_type$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
+
+```
+
+**QTL Enrichment outcomes**
+
+**Enrichment by name** (enrichment analysis will be performed for each trait individually)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_5_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image65.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_5_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image66.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+# GPROFILER
+
+online version: <https://biit.cs.ut.ee/gprofiler/gost>
+
+I got a script from Julia Rodrigues about the R package GPROFILER to perform an enrichment of my Genes.
+```{r eval=FALSE}
+### enriquecimento genico
+#install.packages("gprofiler2")
+library(gprofiler2)
+
+#Para conferir a lista de organism -> https://biit.cs.ut.ee/gprofiler/page/organism-list
+
+#Obs: eu entro com os ids ENSOAR...
+query <- read.table ("/home/bambrozi/2_CORTISOL/GALLO/Bonf_5_15/out_genes_50k_5_15.txt", header = T)
+query <- query[,c("gene_id")]
+
+gene_enrich <- gost(
+  query,
+  organism = "btaurus", 
+  ordered_query = FALSE,
+  multi_query = FALSE,
+  significant = TRUE,
+  exclude_iea = FALSE,
+  measure_underrepresentation = FALSE,
+  evcodes = TRUE,
+  user_threshold = 0.05,
+  correction_method = c("fdr"),
+  domain_scope = c("annotated"),
+  numeric_ns = "",
+  sources = NULL,
+  as_short_link = FALSE,
+  highlight = FALSE
+)
+
+
+#str(gene_enrich) # para ver o formato dos meus dados
+
+#selecionando apenas as informações da lista que me interessam para fazer meu data.frame 
+result_enrich <- data.frame(gene_enrich$result)
+result_enrich <- data.frame(Category = result_enrich$source,
+                            ID = result_enrich$term_id,
+                            Term = result_enrich$term_name,
+                            adj_pvalue = result_enrich$p_value,
+                            id_ensembl = result_enrich$intersection)
+
+write.table(result_enrich,"/home/bambrozi/2_CORTISOL/GPROFILER/Bonf_5_15/gene_enrich_5_15.txt", col.names=TRUE, row.names=FALSE, sep="\t", quote=F)
+write.csv(result_enrich,"/home/bambrozi/2_CORTISOL/GPROFILER/Bonf_5_15/gene_enrich_5_15.csv")
+```
+
+Below we can se the significant terms of this enrichment (output):
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gene_enrich_5_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+## GPROFILER ON-LINE
+
+From the online version of GPROFILER i got the following results.
+
+**Legend**
+<img src="image41.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image67.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image68.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+
+
+
+## Terms distribution Pie Chart
+
+
+
+# Haplotype Blocks
+
 

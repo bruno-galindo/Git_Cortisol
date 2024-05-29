@@ -1,0 +1,5 @@
+"","Category","ID","Term","adj_pvalue","id_ensembl"
+"1","GO:MF","GO:0031702","type 1 angiotensin receptor binding",0.0338371306113339,"ENSBTAG00000012393"
+"2","GO:MF","GO:0031703","type 2 angiotensin receptor binding",0.0338371306113339,"ENSBTAG00000012393"
+"3","GO:MF","GO:0102193","protein-ribulosamine 3-kinase activity",0.0451047239886115,"ENSBTAG00000015414"
+"4","HP","HP:0002524","Cataplexy",0.0295806879277884,"ENSBTAG00000015414,ENSBTAG00000000665"
