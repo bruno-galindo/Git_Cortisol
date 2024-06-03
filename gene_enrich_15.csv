@@ -1,0 +1,8 @@
+"","Category","ID","Term","adj_pvalue","id_ensembl"
+"1","GO:MF","GO:0004352","glutamate dehydrogenase (NAD+) activity",0.0290548161515887,"ENSBTAG00000007540"
+"2","GO:MF","GO:0004353","glutamate dehydrogenase [NAD(P)+] activity",0.0290548161515887,"ENSBTAG00000007540"
+"3","GO:MF","GO:0016639","oxidoreductase activity, acting on the CH-NH2 group of donors, NAD or NADP as acceptor",0.0290548161515887,"ENSBTAG00000007540"
+"4","GO:MF","GO:0031702","type 1 angiotensin receptor binding",0.0290548161515887,"ENSBTAG00000012393"
+"5","GO:MF","GO:0031703","type 2 angiotensin receptor binding",0.0290548161515887,"ENSBTAG00000012393"
+"6","GO:MF","GO:0005026","transforming growth factor beta receptor activity, type II",0.0414893233048461,"ENSBTAG00000019832"
+"7","GO:MF","GO:0102193","protein-ribulosamine 3-kinase activity",0.0414893233048461,"ENSBTAG00000015414"
