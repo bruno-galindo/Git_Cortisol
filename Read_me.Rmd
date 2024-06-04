@@ -1285,34 +1285,51 @@ After insert all **rsID** on VEP the summary is shown below:
 
 <img src="image69.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+As can be seen, the VEP only analysed 14 variants
+
 Bellow I'm gonna show the "genome view" for each SNP (variant) recovered from VEP:
 
-<span style="color: red;">**rs41624254**</span>
+<span style="color: red;">**rs41648479**</span>
 <img src="image70.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-<span style="color: red;">**rs41632193**</span>
+<span style="color: red;">**rs41632223**</span>
 <img src="image71.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-<span style="color: red;">**rs41632223**</span>
+<span style="color: red;">**rs41632193**</span>
 <img src="image72.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-<span style="color: red;">**rs109751680**</span>
+<span style="color: red;">**rs42590312**</span>
 <img src="image73.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-<span style="color: red;">**rs41577586**</span>
+<span style="color: red;">**rs42089058**</span>
 <img src="image74.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-<span style="color: red;">**rs42590312**</span>
+<span style="color: red;">**rs41567074**</span>
 <img src="image75.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-<span style="color: red;">**rs109578343**</span>
+<span style="color: red;">**rs41644634**</span>
 <img src="image76.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
-<span style="color: red;">**rs41648479**</span>
+<span style="color: red;">**rs41624254**</span>
 <img src="image77.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
 <span style="color: red;">**rs109888380**</span>
 <img src="image78.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+<span style="color: red;">**rs41577586**</span>
+<img src="image78b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs109751680**</span>
+<img src="image78c.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+<span style="color: red;">**rs110991998**</span>
+<img src="image78d.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+<span style="color: red;">**rs110031217**</span>
+<img src="image78e.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+<span style="color: red;">**rs109578343**</span>
+<img src="image78f.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 *ps. the unique reference genome available in the VEP is the ARS-UCD1.3, which is not a problem once it is working with the rsID, which for sure is our variant.*
 
@@ -1582,8 +1599,102 @@ The **GO CONTEXT** provided by GPROFILER can be seen in the image below:
 
 ## Terms distribution Pie Chart
 
-
+There was no necessity to make this plot.
 
 # Haplotype Blocks
+
+
+First I need to generate the .ped file
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/Geno_files_after_QC/genoplink_clean
+RESULT=/home/bambrozi/2_CORTISOL/HAPLOBLOCK/inter_file
+
+plink \
+    --bfile ${DATA} \
+    --cow \
+    --recode \
+    --out ${RESULT}
+```
+
+
+Second, is necessary to convert the .ped file to Linkage format:
+
+```{bash eval=F}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/HAPLOBLOCK/inter_file
+RESULT=/home/bambrozi/2_CORTISOL/HAPLOBLOCK/hapblock_in
+
+plink \
+    --file ${DATA} \
+    --cow \
+    --recode HV \
+    --out ${RESULT}
+```
+
+The code above will generate a pair of files **.ped** and **.info** for each chromosome
+
+I ran the **haploview** only for chromosome 03, 11, 14, 19, 20, 22, 23, 26 and 28 that are when the significant SNP are located.
+
+As the LD Plot bring the SNP ordered, first I looked at */home/bambrozi/2_CORTISOL/GWAS/SNP_sig_Bonf_ind_seg_15.csv*, to know the SNP position, and then compare with the **Check Markers** tab in the haploview <span style="background-color:yellow">SNP position</span>
+ x <span style="background-color:lightblue">SNP#</span> in plot
+ 
+ <img src="image51.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/marker_info_gwas_haploview_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+As can be observed in the column "Block",<span style="color: red;">four significant SNPs fell within a Haploblock</span>.
+
+>rs41577586	(ARS-BFGL-NGS-29119)	- chr 19 - order 849 - Block 38
+>rs41644634	(BTA-62125-no-rs) - chr	26 - order 297 - Block 10
+>rs42089058	(BTB-00926636) - chr 26 - order 296 - Block 10
+>rs41648479	(Hapmap43005-BTA-64606) - chr	28 - order 791 - Block 21
+
+<span style="color: blue;">**Chr	3**	(SNP 1818)</span>
+<img src="image82.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	11**	(SNP 674 and 680)</span>
+<img src="image83.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	14**	(SNP 1196 and 1200)</span>
+<img src="image84.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	19**	(SNP 713)</span>
+<img src="image85.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	19**	(SNP 849)</span>
+<img src="image86.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	20**	(SNP 232)</span>
+<img src="image87.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	22**	(SNP 88)</span>
+<img src="image88.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	22**	(SNP 762)</span>
+<img src="image89.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	23**	(SNP 534)</span>
+<img src="image90.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	26**	(SNP 296 and 297)</span>
+<img src="image91.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	28**	(SNP 701)</span>
+<img src="image92.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Chr	28**	(SNP 773 and 791)</span>
+<img src="image93.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
 
 
