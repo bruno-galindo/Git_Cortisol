@@ -1697,4 +1697,80 @@ As can be observed in the column "Block",<span style="color: red;">four signific
 <img src="image93.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 
+# Genetic Correlation
+
+```{r eval=FALSE}
+cortisol_260 <- read.csv("/home/bambrozi/2_CORTISOL/Data/data_clean.csv")
+
+GEBVs <- read.csv("/home/bambrozi/2_CORTISOL/GEBVs_Elora/ebvs_elora.csv")
+
+
+# Sort the columns
+sorted_cortisol_260_ID <- sort(cortisol_260$ID)
+sorted_GEBVs_elora_id <- sort(GEBVs$elora_id)
+
+# Check if the sorted columns have the same values
+identical(sorted_cortisol_260_ID, sorted_GEBVs_elora_id)
+
+# Merging the dataframe with Cortisol values, with the dataframe with GEBVs values
+Merg_Cort_GEBVs <- merge(cortisol_260, GEBVs, by.x = "ID", by.y = "elora_id")
+
+colnames(Merg_Cort_GEBVs)
+
+library(tidyverse)
+
+# Milk dataframe
+milk <- select(Merg_Cort_GEBVs, ID, T4Cortisol, MILK)
+sum(!is.na(milk$MILK))
+
+# Protein dataframe
+prot <- select(Merg_Cort_GEBVs, ID, T4Cortisol, PROT)
+sum(!is.na(prot$PROT))
+
+# Fat dataframe
+fat <- select(Merg_Cort_GEBVs, ID, T4Cortisol, FAT)
+sum(!is.na(fat$FAT))
+
+# FE dataframe
+fe <- select(Merg_Cort_GEBVs, ID, T4Cortisol, FE)
+sum(!is.na(fe$FE))
+
+# CK dataframe
+ck <- select(Merg_Cort_GEBVs, ID, T4Cortisol, CK)
+sum(!is.na(ck$CK))
+
+# ME dataframe
+me <- select(Merg_Cort_GEBVs, ID, T4Cortisol, ME)
+sum(!is.na(me$ME))
+
+
+## Loop
+
+# Load the necessary library
+library(dplyr)
+
+# Define the columns of interest
+columns <- c("MILK", "PROT", "FAT", "FE", "CK", "ME")
+
+# Initialize a list to store the dataframes
+dataframes <- list()
+
+# Loop through each column to create individual dataframes and save them as text files
+for (col in columns) {
+  # Create a dataframe for the current column
+  df <- select(Merg_Cort_GEBVs, ID, T4Cortisol, all_of(col))
+  
+  # Store the dataframe in the list
+  dataframes[[col]] <- df
+  
+  # Construct the filename
+  filename <- paste0("df_", col, ".txt")
+  
+  # Construct the full file path
+  full_path <- file.path("/home/bambrozi/2_CORTISOL/Correlation/df", filename)
+  
+  # Save the dataframe as a space-separated text file with full path
+  write.table(df, file = full_path, sep = " ", row.names = FALSE, col.names = TRUE)
+}
+```
 
