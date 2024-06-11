@@ -1699,6 +1699,32 @@ As can be observed in the column "Block",<span style="color: red;">four signific
 
 # Genetic Correlation
 
+To assess the correlation between Cortisol phenotypes and Genomic Estimated Breeding Values (GEBVs), we opt for a linear regression instead of a standard correlation test. This decision is driven by the non-normal distribution of our Cortisol phenotypes, which violates the assumptions required for traditional correlation tests.
+
+Linear regression offers a robust alternative as it does not necessitate normality for the dependent variable. By regressing GEBVs over Cortisol, we can model the relationship between these variables. Our aim is to estimate the regression coefficient, which serves as our correlation estimate.
+
+Due to the violation of normality assumptions for the dependent variable (Cortisol), traditional correlation tests may not provide reliable results, particularly in assessing the significance of the correlation. Therefore, alternative approaches, such as linear regression, are preferred as they do not require the same assumptions about the distribution of the dependent variable. By using linear regression, we can still assess the relationship between Cortisol and GEBVs while accommodating the non-normality of Cortisol phenotypes.
+
+The regression model can be represented as follows:
+\[ y = \beta_0 + \beta_1 \times GEBV_{\text{Milk}} + \epsilon \]
+
+Where:
+
+- \( y \) represents Cortisol phenotypes.
+- \( GEBV_{\text{Milk}} \) denotes the GEBV for Milk Yield.
+- \( \beta_0 \) and \( \beta_1 \) are the intercept and regression coefficient, respectively.
+- \( \epsilon \) represents the error term capturing unexplained variability.
+
+This approach enables us to quantify the relationship between Cortisol and GEBVs, addressing the non-normality of Cortisol phenotypes while allowing for formal hypothesis testing of the correlation's significance.
+
+## Data preparation
+
+The first data I received from Lucas had only 135 animals out of 260 with values the other 125 had only NA
+I shown this to Lucas
+Lucas wrote to Alisson
+Lucas sent me the missing animals
+I merged this two files
+
 ```{r eval=FALSE}
 rm(list = ls())
 
@@ -1708,49 +1734,65 @@ library(tidyverse)
 
 cortisol_260 <- read.csv("/home/bambrozi/2_CORTISOL/Data/data_clean.csv")
 
-GEBVs <- read.csv("/home/bambrozi/2_CORTISOL/GEBVs_Elora/ebvs_elora.csv")
-
-#After talk to Lucas Alcântara, I got the meaning of some extra acronyms, so this is the full list of EBVs which we know the meaning.
+#This is the first dataframe with information for 135 animals and 125 NA
+GEBVs1 <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/ebvs_elora.csv")
+#This is the second file with information for the 125 NA animals
+GEBVs2 <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/elora_missing_females_2404_06_11_2024.csv")
+#This are de columns we can use because we know the meaning of the acronyms
 GEBVs_to_use <- read.csv("/home/bambrozi/2_CORTISOL/GEBVs_Elora/ebv_names_lucas_06102024_BAG.csv")
 
-# Check if the dataframes received from Samantha and Lucas Alcântara have the same animal IDs
-# Sort the columns
-sorted_cortisol_260_ID <- sort(cortisol_260$ID)
-sorted_GEBVs_elora_id <- sort(GEBVs$elora_id)
-identical(sorted_cortisol_260_ID, sorted_GEBVs_elora_id)
 
-# Merging the dataframe with Cortisol (Samantha) values, with the dataframe with GEBVs values (Lucas Alcantara)
-Merg_Cort_GEBVs <- merge(cortisol_260, GEBVs, by.x = "ID", by.y = "elora_id")
+sum(is.na(GEBVs1$MILK))
+GEBVs1<- GEBVs1[which(is.na(GEBVs1[,"DHI_BARN_NAME"]) == F),]
 
+sum(is.na(GEBVs2$MILK))
+GEBVs2<- GEBVs2[which(is.na(GEBVs2[,"DHI_BARN_NAME"]) == F),]
 
-## Loop
+print(GEBVs1$DHI_BARN_NAME)
+print(GEBVs2$DHI_BARN_NAME)
 
-# Define the columns of interest, that is the columns that we have meaning of the acronyms
-# Create the vector with EBV values where Meaning is not empty
-columns <- GEBVs_to_use %>%
-  filter(Meaning != "") %>%
-  pull(EBV)
+# Making the two dataframes with the same columns
+# Remove elora_id and international_id from GEBVs1
+GEBVs1 <- GEBVs1 %>% select(-elora_id, -international_id)
 
-# Initialize a list to store the dataframes
-dataframes <- list()
+# Remove ANIMAL_ID from GEBVs2
+GEBVs2 <- GEBVs2 %>% select(-ANIMAL_ID)
 
-# Loop through each column to create individual dataframes and save them as text files
-for (col in columns) {
-  # Create a dataframe for the current column
-  df <- select(Merg_Cort_GEBVs, ID, T4Cortisol, all_of(col))
-  
-  # Store the dataframe in the list
-  dataframes[[col]] <- df
-  
-  # Construct the filename
-  filename <- paste0("df_", col, ".txt")
-  
-  # Construct the full file path
-  full_path <- file.path("/home/bambrozi/2_CORTISOL/Correlation/df", filename)
-  
-  # Save the dataframe as a space-separated text file with full path
-  write.table(df, file = full_path, sep = " ", row.names = FALSE, col.names = TRUE)
+# Check if the two dataframes have the same columns
+have_same_columns <- all(names(GEBVs1) == names(GEBVs2))
+
+if (have_same_columns) {
+  print("The dataframes have the same columns.")
+} else {
+  print("The dataframes do not have the same columns.")
 }
+
+
+# Check if the column names are in the same order
+same_order <- identical(names(GEBVs1), names(GEBVs2))
+
+if (same_order) {
+  print("The columns are in the same order.")
+} else {
+  print("The columns are not in the same order.")
+}
+
+GEBVs_combined <- rbind(GEBVs1, GEBVs2)
+
+# Sort the columns
+sorted_cortisol_260 <- sort(cortisol_260$ID)
+sorted_GEBVs_combined <- sort(GEBVs_combined$DHI_BARN_NAME)
+
+# Check if the sorted columns have the same values
+identical(sorted_cortisol_260, sorted_GEBVs_combined)
+
+# Assuming GEBVs_combined is your data frame
+GEBVs_combined <- GEBVs_combined %>%
+  select(DHI_BARN_NAME, everything())
+
+# Merging the dataframe with Cortisol values, with the dataframe with GEBVs values
+Merg_Cort_GEBVs <- merge(cortisol_260, GEBVs_combined, by.x = "ID", by.y = "elora_id")
+
 
 
 ```
