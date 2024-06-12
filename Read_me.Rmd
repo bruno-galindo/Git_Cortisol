@@ -1739,13 +1739,13 @@ GEBVs1 <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/ebvs_elora.cs
 #This is the second file with information for the 125 NA animals
 GEBVs2 <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/elora_missing_females_2404_06_11_2024.csv")
 #This are de columns we can use because we know the meaning of the acronyms
-GEBVs_to_use <- read.csv("/home/bambrozi/2_CORTISOL/GEBVs_Elora/ebv_names_lucas_06102024_BAG.csv")
+GEBVs_to_use <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/ebv_names_lucas_06102024_BAG.csv")
 
 
 sum(is.na(GEBVs1$MILK))
 GEBVs1<- GEBVs1[which(is.na(GEBVs1[,"DHI_BARN_NAME"]) == F),]
 
-sum(is.na(GEBVs2$MILK))
+sum(!is.na(GEBVs2$MILK))
 GEBVs2<- GEBVs2[which(is.na(GEBVs2[,"DHI_BARN_NAME"]) == F),]
 
 print(GEBVs1$DHI_BARN_NAME)
@@ -1786,14 +1786,146 @@ sorted_GEBVs_combined <- sort(GEBVs_combined$DHI_BARN_NAME)
 # Check if the sorted columns have the same values
 identical(sorted_cortisol_260, sorted_GEBVs_combined)
 
+# Create a duplicate of the column 'DHI_BARN_NAME' and name it 'elora_id'
+GEBVs_combined$elora_id <- GEBVs_combined$DHI_BARN_NAME
+
 # Assuming GEBVs_combined is your data frame
 GEBVs_combined <- GEBVs_combined %>%
-  select(DHI_BARN_NAME, everything())
+  select(elora_id, DHI_BARN_NAME, everything())
+
+write.csv(GEBVs_combined, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/ebvs_elora_complete.csv")
 
 # Merging the dataframe with Cortisol values, with the dataframe with GEBVs values
 Merg_Cort_GEBVs <- merge(cortisol_260, GEBVs_combined, by.x = "ID", by.y = "elora_id")
 
+write.csv(Merg_Cort_GEBVs, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/Merged_Cortisol_GEBVs.csv")
 
+#Opening the file with the GEBVs columns to use
+Columns_to_use <- readLines("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/traits_to_use.txt")
+
+data <- select(Merg_Cort_GEBVs, ID, T4Cortisol, all_of(Columns_to_use))
+
+write.csv(data, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits.txt")
 
 ```
 
+ps. I double checked by hand the select and merge process against the original tables received and is everything ok.
+
+## Correlations - Linear Regression
+
+### Test with one trait
+
+```{r eval=FALSE}
+# Fit the linear regression model
+model <- lm(T4Cortisol ~ MILK, data = data)
+
+# Summarize the model to get the regression coefficients and statistical summary
+model_summary <- summary(model)
+
+# Extract the desired statistics
+multiple_r_squared <- model_summary$r.squared
+adjusted_r_squared <- model_summary$adj.r.squared
+f_statistic <- model_summary$fstatistic[1]
+p_value <- pf(model_summary$fstatistic[1], model_summary$fstatistic[2], model_summary$fstatistic[3], lower.tail = FALSE)
+
+# Combine the statistics into a data frame
+results <- data.frame(
+  Multiple_R_Squared = multiple_r_squared,
+  Adjusted_R_Squared = adjusted_r_squared,
+  F_Statistic = f_statistic,
+  P_Value = p_value
+)
+
+# Save the results to a CSV file
+write.csv(results, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_milk.csv", row.names = FALSE)
+
+# Plot the linear regression between T4Cortisol and MILK
+ggplot(data, aes(x = MILK, y = T4Cortisol)) +
+  geom_point() +  # Add points
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add linear regression line
+  labs(title = "Linear Regression of T4Cortisol on MILK",
+       x = "MILK",
+       y = "T4Cortisol") +
+  theme_minimal()
+
+```
+
+<span style="color: blue;">**Plot linear regression** Cortisol vs. Milk GEBV</span>
+<img src="image94.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<span style="color: blue;">**Summary statistics**</span>
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_milk.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+### Loop for all traits
+
+As we have 54 GEBVs to fit a linear regression we designed a loop:
+
+```{r eval=FALSE}
+# Initialize a list to store the results
+results_list <- list()
+
+# Loop through columns 3 to 56 for the GEBVs
+for (i in 3:ncol(data)) {
+  trait_name <- colnames(data)[i]
+  
+  # Fit the linear regression model
+  model <- lm(data[[2]] ~ data[[i]], data = data)
+  
+  # Summarize the model
+  model_summary <- summary(model)
+  
+  # Extract the desired statistics
+  multiple_r_squared <- model_summary$r.squared
+  adjusted_r_squared <- model_summary$adj.r.squared
+  f_statistic <- model_summary$fstatistic[1] # F-statistic value
+  f_num_df <- model_summary$fstatistic[2] # Numerator degrees of freedom
+  f_den_df <- model_summary$fstatistic[3] # Denominator degrees of freedom
+  p_value <- pf(f_statistic, f_num_df, f_den_df, lower.tail = FALSE) # P-value
+  
+  # Combine the statistics into a data frame
+  result <- data.frame(
+    Trait = trait_name,
+    Multiple_R_Squared = multiple_r_squared,
+    Adjusted_R_Squared = adjusted_r_squared,
+    F_Statistic = f_statistic,
+    P_Value = p_value
+  )
+  
+  # Append the result to the results list
+  results_list[[i - 2]] <- result
+}
+
+# Combine all results into a single data frame
+results_df <- do.call(rbind, results_list)
+
+# Save the results to a CSV file
+write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_all_traits.csv", row.names = FALSE)
+```
+
+<span style="color: blue;">**Summary statistics for all Traits' GEBVs**</span>
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_all_traits.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+Five out 54 traits GEBVs presented significant correlations with Cortisol:
+<ul>
+<li> BMR = Body Maintenance Requirements
+<li> CO = Cystic ovaries
+<li> MSL = Median Suspensory Ligament
+<li> CTFS = Calving to First Service
+<li> UT = Udder Texture
+</ul>
