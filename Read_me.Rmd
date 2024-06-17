@@ -1803,7 +1803,7 @@ write.csv(Merg_Cort_GEBVs, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/Merge
 #Opening the file with the GEBVs columns to use
 Columns_to_use <- readLines("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/traits_to_use.txt")
 
-data <- select(Merg_Cort_GEBVs, ID, T4Cortisol, all_of(Columns_to_use))
+data <- select(Merg_Cort_GEBVs, ID, T4Cortisol, BIRTH_YEAR, all_of(Columns_to_use))
 
 write.csv(data, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits.txt")
 
@@ -1929,3 +1929,116 @@ Five out 54 traits GEBVs presented significant correlations with Cortisol:
 <li> CTFS = Calving to First Service
 <li> UT = Udder Texture
 </ul>
+
+### Adding BIRTH_YEAR
+
+```{r eval=FALSE}
+
+# Convert BIRTH_YEAR to a factor and rename
+data$BIRTH_YEAR <- as.factor(data$BIRTH_YEAR)
+
+# Initialize a list to store the results
+results_list <- list()
+
+# Loop through columns 3 to ncol(data) for the GEBVs
+for (i in 4:ncol(data)) {
+  trait_name <- colnames(data)[i]
+  
+  # Fit the linear regression model with BIRTH_YEAR as an additional predictor
+  model <- lm(data[[2]] ~ data[[i]] + BIRTH_YEAR, data = data)
+  
+  # Summarize the model
+  model_summary <- summary(model)
+  
+  # Extract the desired statistics
+  multiple_r_squared <- model_summary$r.squared
+  adjusted_r_squared <- model_summary$adj.r.squared
+  f_statistic <- model_summary$fstatistic[1] # F-statistic value
+  f_num_df <- model_summary$fstatistic[2] # Numerator degrees of freedom
+  f_den_df <- model_summary$fstatistic[3] # Denominator degrees of freedom
+  p_value <- pf(f_statistic, f_num_df, f_den_df, lower.tail = FALSE) # P-value
+  
+  # Extract the coefficient and its p-value for the trait
+  coef_summary <- coef(model_summary)
+  trait_coef <- coef_summary[2, "Estimate"]  # Assumes the trait is the second predictor
+  trait_p_value <- coef_summary[2, "Pr(>|t|)"]
+  
+  # Combine the statistics into a data frame
+  result <- data.frame(
+    Trait = trait_name,
+    Multiple_R_Squared = multiple_r_squared,
+    Adjusted_R_Squared = adjusted_r_squared,
+    F_Statistic = f_statistic,
+    P_Value = p_value,
+    Coefficient = trait_coef,
+    Coefficient_P_Value = trait_p_value
+  )
+  
+  # Append the result to the results list
+  results_list[[i - 2]] <- result
+}
+
+# Combine all results into a single data frame
+results_df <- do.call(rbind, results_list)
+
+# Save the results to a CSV file
+write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/regression_summary_all_traits_BY.csv", row.names = FALSE)
+
+```
+
+<span style="color: blue;">**Summary statistics for all Traits' GEBVs adding BIRTY_YEAR**</span>
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_all_traits_BY.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+Fitting Birth_Year to the model made one more trait significativally correlated with cortisol and enhanced the proportio of variation explained by the model:
+<ul>
+<li> BMR = Body Maintenance Requirements
+<li> CO = Cystic ovaries
+<li> MSL = Median Suspensory Ligament
+<li> CTFS = Calving to First Service
+<li> UT = Udder Texture
+<li> **IH = Interdigital Hyperplasia**
+</ul>
+
+
+Below we can check the improvement in the percentage of variation in Cortisol explained by the Trait_GEBVs + Birth_Year.
+
+```{r eval=FALSE}
+CORR_BY <- read.csv("/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/regression_summary_all_traits_BY.csv")
+
+CORR_MIN <- read.csv("/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_all_traits.csv")
+
+CORR_BY <- CORR_BY[, c("Trait", "Adjusted_R_Squared"), drop = FALSE]
+
+CORR_MIN <- CORR_MIN[, c("Trait", "Adjusted_R_Squared"), drop = FALSE]
+
+colnames(CORR_BY)[colnames(CORR_BY) == "Adjusted_R_Squared"] <- "Adjusted_R_Squared_BY"
+
+colnames(CORR_MIN)[colnames(CORR_MIN) == "Adjusted_R_Squared"] <- "Adjusted_R_Squared_MIN"
+
+Corr_R2_comp <- merge(CORR_MIN, CORR_BY, by.x = "Trait", by.y = "Trait")
+
+Corr_R2_comp$Absolute_Change <- Corr_R2_comp$Adjusted_R_Squared_BY - Corr_R2_comp$Adjusted_R_Squared_MIN
+
+write.csv(Corr_R2_comp, "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/absolute_improv_r2.csv")
+```
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/absolute_improv_r2.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+*Adjusted_R_Squared_Model_MIN = Model without Birth Year*  
+*Adjusted_R_Squared_MIN.BY = Model adding Birth Year*
+
+
