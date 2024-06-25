@@ -1872,8 +1872,8 @@ As we have 54 GEBVs to fit a linear regression we designed a loop:
 # Initialize a list to store the results
 results_list <- list()
 
-# Loop through columns 3 to 56 for the GEBVs
-for (i in 3:ncol(data)) {
+# Loop through columns 4 to ncol(data) for the GEBVs
+for (i in 4:ncol(data)) {
   trait_name <- colnames(data)[i]
   
   # Fit the linear regression model
@@ -1890,24 +1890,32 @@ for (i in 3:ncol(data)) {
   f_den_df <- model_summary$fstatistic[3] # Denominator degrees of freedom
   p_value <- pf(f_statistic, f_num_df, f_den_df, lower.tail = FALSE) # P-value
   
+  # Extract the coefficient and its p-value for the trait
+  coef_summary <- coef(model_summary)
+  trait_coef <- coef_summary[2, "Estimate"]  # Assumes the trait is the second predictor
+  trait_p_value <- coef_summary[2, "Pr(>|t|)"]
+  
   # Combine the statistics into a data frame
   result <- data.frame(
     Trait = trait_name,
     Multiple_R_Squared = multiple_r_squared,
     Adjusted_R_Squared = adjusted_r_squared,
     F_Statistic = f_statistic,
-    P_Value = p_value
+    P_Value = p_value,
+    Coefficient = trait_coef,
+    Coefficient_P_Value = trait_p_value
   )
   
   # Append the result to the results list
-  results_list[[i - 2]] <- result
+  results_list[[i - 3]] <- result
 }
 
 # Combine all results into a single data frame
-results_df <- do.call(rbind, results_list)
+results_df_0 <- do.call(rbind, results_list)
 
 # Save the results to a CSV file
 write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_all_traits.csv", row.names = FALSE)
+
 ```
 
 <span style="color: blue;">**Summary statistics for all Traits' GEBVs**</span>
@@ -1930,9 +1938,10 @@ Five out 54 traits GEBVs presented significant correlations with Cortisol:
 <li> UT = Udder Texture
 </ul>
 
-### Adding BIRTH_YEAR
+### Adding BIRTH_YEAR  
 
-## Model Description
+
+#### Model Description
 
 The regression model added the BY is shown bellow:
 
@@ -1946,7 +1955,8 @@ Where:
 - \( \beta_0 \), \( \beta_1 \), and \( \beta_2 \) are the intercept and regression coefficients, respectively.
 - \( \epsilon \) represents the error term capturing unexplained variability.
 
-The model can be implemented in R using the `lm` function, which fits linear models. The `BIRTH_YEAR` variable is converted to a factor to account for the categorical nature of birth years.
+
+The `BIRTH_YEAR` variable is converted to a factor to account for the categorical nature of birth years.
 
 
 ```{r eval=FALSE}
