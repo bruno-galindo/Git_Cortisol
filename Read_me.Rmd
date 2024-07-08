@@ -1945,14 +1945,14 @@ Five out 54 traits GEBVs presented significant correlations with Cortisol:
 
 The regression model added the BY is shown bellow:
 
-\[ y = \beta_0 + \beta_1 \times GEBV_{\text{Trait}} + \beta_2 \times BIRTH\_YEAR + \epsilon \]
+\[ y = \beta_0 + \beta_1 \times GEBV_{\text{Trait}} + BIRTH\_YEAR + \epsilon \]
 
 Where:
 
 - \( y \) represents Cortisol phenotypes.
 - \( GEBV_{\text{Trait}} \) denotes the GEBV for the specific trait (e.g., Milk Yield).
 - \( BIRTH\_YEAR \) is the birth year of the subjects, included as a factor.
-- \( \beta_0 \), \( \beta_1 \), and \( \beta_2 \) are the intercept and regression coefficients, respectively.
+- \( \beta_0 \) and \( \beta_1 \) are the intercept and regression coefficient, respectively.
 - \( \epsilon \) represents the error term capturing unexplained variability.
 
 
