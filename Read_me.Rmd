@@ -1803,9 +1803,32 @@ write.csv(Merg_Cort_GEBVs, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/Merge
 #Opening the file with the GEBVs columns to use
 Columns_to_use <- readLines("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/traits_to_use.txt")
 
+colnames(Merg_Cort_GEBVs)[405] <- "IDD"
+
 data <- select(Merg_Cort_GEBVs, ID, T4Cortisol, BIRTH_YEAR, all_of(Columns_to_use))
 
-write.csv(data, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits.txt")
+# The data below has the the 55 GEBVs + Cortisol data + Birth Year
+write.csv(data, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits.csv")
+
+samp_date2 <- read.csv("/home/bambrozi/2_CORTISOL/Data/Elora animal_ids_kl_sampling_date.csv")
+
+# Convert Sampling_date to Date using as.Date
+samp_date$Sampling_date <- as.Date(samp_date$Sampling_date, format = "%m/%d/%Y")
+
+table(samp_date$Sampling_date)
+
+samp_date <- select(samp_date, Elora_id, Sampling_date)
+
+# Check if data$ID and samp_dates$elora_id are identical in values and order
+identical(data$ID, samp_date$Elora_id)
+
+data_final <- merge(data, samp_date, by.x="ID", by.y="Elora_id")
+
+data_final <- data_final %>%
+  select(ID, T4Cortisol, BIRTH_YEAR, Sampling_date, everything())
+
+# The data below has the the 55 GEBVs + Cortisol data + Birth Year + Sampling data
+write.csv(data_final, "/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits2.csv")
 
 ```
 
@@ -2069,3 +2092,96 @@ knitr::kable(data)
 *Adjusted_R_Squared_MIN.BY = Model adding Birth Year*
 
 
+### Adding BIRTH_YEAR and SAMPLING DATE
+
+The regression model added the **BY** and **SAMPLING DATE** is shown bellow:
+
+\[ y = \beta_0 + \beta_1 \times GEBV_{\text{Trait}} + BIRTH\_YEAR + SAMPLING\_DATE + \epsilon \]
+
+Where:
+
+- \( y \) represents Cortisol phenotypes.
+- \( GEBV_{\text{Trait}} \) denotes the GEBV for the specific trait (e.g., Milk Yield).
+- \( BIRTH\_YEAR \) is the birth year of the subjects, included as a **factor**.
+- \( SAMPLING\_DATE \) is the cortisol sampling date for the subjects, included as a **factor**.
+- \( \beta_0 \) and \( \beta_1 \) are the intercept and regression coefficient, respectively.
+- \( \epsilon \) represents the error term capturing unexplained variability.
+
+
+The `SAMPLING_DATE` variable is also converted to a factor to account for the categorical nature of sampling date.
+
+```{r eval=FALSE}
+# Convert BIRTH_YEAR to a factor and rename
+data_final$BIRTH_YEAR <- as.factor(data_final$BIRTH_YEAR)
+
+# Convert Sampling_data to a factor and rename
+data_final$Sampling_date <- as.factor(data_final$Sampling_date)
+
+# Initialize a list to store the results
+results_list <- list()
+
+# Loop through columns 3 to ncol(data) for the GEBVs
+for (i in 5:ncol(data_final)) {
+  trait_name <- colnames(data_final)[i]
+  
+  # Fit the linear regression model with BIRTH_YEAR as an additional predictor
+  model <- lm(data_final[[2]] ~ data_final[[i]] + data_final$BIRTH_YEAR + data_final$Sampling_date , data = data_final)
+  
+  # Summarize the model
+  model_summary <- summary(model)
+  
+  # Extract the desired statistics
+  multiple_r_squared <- model_summary$r.squared
+  adjusted_r_squared <- model_summary$adj.r.squared
+  f_statistic <- model_summary$fstatistic[1] # F-statistic value
+  f_num_df <- model_summary$fstatistic[2] # Numerator degrees of freedom
+  f_den_df <- model_summary$fstatistic[3] # Denominator degrees of freedom
+  p_value <- pf(f_statistic, f_num_df, f_den_df, lower.tail = FALSE) # P-value
+  
+  # Extract the coefficient and its p-value for the trait
+  coef_summary <- coef(model_summary)
+  trait_coef <- coef_summary[2, "Estimate"]  # Assumes the trait is the second predictor
+  trait_p_value <- coef_summary[2, "Pr(>|t|)"]
+  
+  # Combine the statistics into a data frame
+  result <- data.frame(
+    Trait = trait_name,
+    Multiple_R_Squared = multiple_r_squared,
+    Adjusted_R_Squared = adjusted_r_squared,
+    F_Statistic = f_statistic,
+    P_Value = p_value,
+    Coefficient = trait_coef,
+    Coefficient_P_Value = trait_p_value
+  )
+  
+  # Append the result to the results list
+  results_list[[i - 2]] <- result
+}
+
+# Combine all results into a single data frame
+results_df <- do.call(rbind, results_list)
+
+# Save the results to a CSV file
+write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/regression_summary_all_traits_BY.csv", row.names = FALSE)
+```
+
+<span style="color: blue;">**Summary statistics for all Traits' GEBVs adding BIRTY_YEAR and SAMPLING_DATE**</span>
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_all_traits_BY_SampDt.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+Fitting Birth_Year and Sampling_date to the model these are the traits with significant correlation:
+<ul>
+<li> CO = Cystic ovaries
+<li> BMR = Body Maintenance Requirements
+<li> LP = Lactation persistency
+<li> MILK = Milk yield
+<li> PROT = Protein yield
+<li> UT = Udder Texture
+</ul>
