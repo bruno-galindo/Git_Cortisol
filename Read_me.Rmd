@@ -2186,44 +2186,44 @@ Fitting Birth_Year and Sampling_date to the model these are the traits with sign
 <li> UT = Udder Texture
 </ul>
 
-# Heritability estimation
+# Heritability estimation - BLUPF90
 
-Preparing files to run Variance components estimation.
+Preparing files to run Variance components estimation using REML with AI (Average Information) algorithm.
 
-```{bash eval=FALSE}
-# to replace comma for space in the .csv file with the equivalence among IDs
-sed -i 's/,/ /g' bruno_ids.csv
+To run this analysis we need to grab these files below
 
-# Using the awk function to merge the two files and the second awk to select only the 3rd and 5fh columns
-awk 'FNR==NR {a[$2]=$0; next} {print a[$1], $0}' bruno_ids.csv bruno_gntps.txt | awk '{print$3,$5}' > bruno_gntps_iid
-```
+<ul>
+<li> Phenotype and Fixed effects file
+<li> Pedigree file
+<li> Genotype file
+<li> BlupF90+ executable file
+<li> RenumF90 executable file
+<li> Parameter file
+<ul>
 
+## Phenotype and Fixed effects file
 
+The appearance of this file is like this:
+
+<img src="image95.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**FIRST COLUMN** = Animal ID
+**SECOND COLUMN** = Phenotype
+**THIRD COLUMN** = Fixed Effect 1
+**FOURTH COLUMN** = Fixed Effect 2
+
+To get in one file these four columns we need the following code:
 
 ```{r eval=FALSE}
 
 #File with equivalence among different ids
 eq_ids <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv")
 
-# Ped file with iid
-ped_iid <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ped.iid.csv", header = F)
-
-# Ped file with cid
-ped_cid <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ped.id.csv", header = F)
-
 # Genotype file with cid
 geno <- read.table("/home/bambrozi/2_CORTISOL/Geno_files/genoplink.ped")
 
-#Asking which geno$V2 are present in eq_ids
-all(geno$V2 %in% eq_ids$cdn_id)
-
-# Create a new column geno$iid, and bring the iid from eq_ids to geno file
-geno$iid <- eq_ids$iid[match(geno$V2, eq_ids$cdn_id)]
-
-# organizing the columns sequence
-library(dplyr)
-geno <- geno %>%
-  select(V1, V2, iid, everything())
+# Phenotipic file and fixed effects
+data_final <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits2.csv")
 
 # creating a pheno file with only ID, Cortisol, BY and Sam date columns
 pheno <- data_final %>%
@@ -2236,8 +2236,76 @@ pheno$iid <- eq_ids$iid[match(pheno$ID, eq_ids$elora_id)]
 pheno <- pheno%>%
   select(iid, T4Cortisol, BIRTH_YEAR, Sampling_date)
 
+# Create a new column geno$iid, and bring the iid from eq_ids to geno file
+geno$iid <- eq_ids$iid[match(geno$V2, eq_ids$cdn_id)]
+
+# organizing the columns sequence
+library(dplyr)
+geno <- geno %>%
+  select(V1, V2, iid, everything())
+
 # Keeping in the pheno file only the rows present also in geno file
 pheno <- pheno %>%
   filter(iid %in% geno$iid)
+
+write.table(pheno, "/home/bambrozi/2_CORTISOL/Heritability_BLUPF90/pheno_fix_eff.txt", sep = " ", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
 ```
+
+
+The file should be saved as text file, with separation by space and no columns names.
+
+## Pedigree file
+
+The appearance of this file is like this:
+
+<img src="image96.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**FIRST COLUMN** = Animal ID
+**SECOND COLUMN** = Sire ID
+**THIRD COLUMN** = Dam ID
+
+The file should be saved as text file, with separation by space and no columns names.
+
+We used the code below to remove the commas of a .csv file to a file with sepation by spaces.
+```{bash eval=FALSE}
+# to replace comma for space in the .csv file with the equivalence among IDs
+sed -i 's/,/ /g' bruno_ids.csv
+```
+
+## Genotype file
+
+The appearance of this file is like this:
+
+<img src="image97.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**FIRST COLUMN** = Animal ID
+**SECOND COLUMN** = Genotypes (0, 1 and 2 format)
+
+The file should be saved as text file, with separation by space and no columns names.
+
+We  used the code below to replace the cid for iid. First we merge using the second column of the firs file, and the first column of the second file. Then we use again the command awk to keep only the third and fifth columsn and sabe in a different object.
+
+
+```{bash eval=FALSE}
+# Using the awk function to merge the two files and the second awk to select only the 3rd and 5fh columns
+awk 'FNR==NR {a[$2]=$0; next} {print a[$1], $0}' bruno_ids.csv bruno_gntps.txt | awk '{print$3,$5}' > bruno_gntps_iid
+```
+
+## Download the executable files
+
+Download from this website <https://nce.ads.uga.edu/html/projects/programs/Linux/64bit/>:
+<ul>
+<li> BlupF90+
+<li> renumF90
+<ul>
+
+## Parameter file
+
+The appearance of this file is like this:
+
+<img src="image98.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<ul>
+<li> DATAFILE
 
