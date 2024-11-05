@@ -1321,7 +1321,7 @@ FIXEFF=/home/bambrozi/2_CORTISOL/GWAS/GWAS_plus_BY_Samp/fixeff.txt
 Now we are going to apply a correction for multiple testing modifying the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
 
 ```{r eval=FALSE}
-{r eval=FALSE}
+
 Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
 
 library(dplyr)
@@ -2012,7 +2012,367 @@ As can be observed in the column "Block",<span style="color: red;">four signific
 
 # GWAS - EXTREME PHENO - WITH BY and SD
 
-# GWAS on GCTA - considering BIRTH_YEAR and SAMPLING_DATE
+## Data preparation
+
+I received from Umesh a e-mail informing the three categories that the animals could be sorted based on their cortisol concentration.
+
+<img src="image6.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+```{r eval=FALSE}
+
+pheno <- read.table("/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt", header = T)
+data_final <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits2.csv", header = T)
+ids_eq <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv", header = T)
+
+
+# Create an matrix with fixed effects with only those animals which also have phenotype and genotype
+data_final$cdn_id <- ids_eq$cdn_id[match(data_final$ID, ids_eq$elora_id)]
+fixeff <- data_final[,c("ID", "BIRTH_YEAR", "Sampling_date", "cdn_id")]
+fixeff <- fixeff[fixeff$cdn_id %in% pheno$cdn_id, ]
+fixeff$FID <- "HO"
+fixeff <- fixeff[, c("FID", "cdn_id", "BIRTH_YEAR", "Sampling_date")]
+
+# Now we are gona remove the intermediary animals from pheno object
+pheno$Categorical <- ifelse(pheno$cortisol >= 956, "H", 
+                           ifelse(pheno$cortisol <= 190.8, "L", "M"))
+table(pheno$Categorical)
+pheno <- pheno[pheno$Categorical != "M", ]
+pheno <- pheno[, c("FID", "cdn_id", "cortisol")]
+
+# Now we are going to remove from fixeff the animals which are not in pheno
+fixeff <- fixeff[fixeff$cdn_id %in% pheno$cdn_id,]
+
+#Checking if match the animals and order
+identical(fixeff$cdn_id, pheno$cdn_id)
+
+#Creating a file with animals to keep in the genotype file, we will use it on Plink
+to_keep_geno <- pheno[, c("FID", "cdn_id")]
+
+write.table(fixeff, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt", quote = F, row.names = F, col.names = T)
+write.table(pheno, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt", quote = F, row.names = F, col.names = T)
+write.table(to_keep_geno, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/to_keep_geno.txt", quote = F, row.names = F, col.names = F)
+
+```
+
+We ended up with  
+H (Hight) = 34 animals  
+L (Low)  = 37 animals
+Total = 71 animals
+
+On Plink we will remove all individuals from genotype files that are classified as Medium, keeping only the High and Low
+
+```{bash eval= FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/Geno_files_after_QC/genoplink_clean
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
+KEEP=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/to_keep_geno.txt
+
+plink2 --bfile ${DATA} --keep ${KEEP} --chr-set 29 --make-bed --out ${RESULT}
+```
+
+## GWAS on GCTA
+
+```{bash eval=FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result
+PHENO=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt
+FIXEFF=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt
+
+/home/local/bin/gcta \
+    --bfile ${DATA} \
+    --mlma-loco \
+    --pheno ${PHENO} \
+    --qcovar ${FIXEFF} \
+    --autosome-num 29 \
+    --autosome \
+    --out ${RESULT}
+```
+
+After ran the GWAS above I got the following message from the GCTA:
+
+<span style="color:red">**Error: analysis stopped because more than half of the variance components are constrained. The result would be unreliable. You may have a try of the option --reml-no-constrain.**</span>
+
+
+As we got this error message, we needed to solve this problem, and for that we used the whole sample size (252 individuals) to estimate the variance components in GCTA, and after this, using this variance components from the whole sample we perfomed ths GWAS with the subset of individuals (34 High + 37 Low = 71)
+
+STOPSTOP
+
+
+Than a ran this new code **with NO CONSTRAIN**
+
+```{bash eval=FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result_NO_CONSTRAIN
+PHENO=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt
+FIXEFF=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt
+
+/home/local/bin/gcta \
+    --bfile ${DATA} \
+    --reml-no-constrain \
+    --mlma-loco \
+    --pheno ${PHENO} \
+    --qcovar ${FIXEFF} \
+    --autosome-num 29 \
+    --autosome \
+    --out ${RESULT}
+
+```
+ 
+
+### Corrected Bonferroni for genome independent segments
+
+Now we are going to apply a correction for multiple testing modifying the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
+
+```{r eval=FALSE}
+
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+gwas<- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result_NO_CONSTRAIN.loco.mlma", 
+                  head=T, stringsAsFactors = F)
+
+
+gwas$Chr<- as.factor(gwas$Chr)
+gwas$logP<- -log10(gwas$p)
+rmv<- which(gwas$logP == "NaN")
+if (length(rmv) >=1) {gwas <- gwas[-rmv,]}
+
+bonf<- -log10(0.15/Me)
+
+library(GHap)
+ghap.manhattan(data=gwas,chr="Chr", bp="bp", y="logP", type="p", pch = 20, 
+               cex=1, lwd=1, ylab="", xlab="Chromossomes", 
+               main="GWAS Cortisol", backcolor="#F5EFE780", chr.ang=0,)
+abline(h=(bonf), col="red2")
+legend("topright", col="red2", lwd=2, c("Bonferroni corr. for ind. segments"), bty="n")
+
+
+library(tidyverse)
+
+SNP_sig_bonf_ind_seg <- filter(gwas, logP > bonf)
+write.table(SNP_sig_bonf_ind_seg, file = "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/SNP_sig15_Bonf_ind_seg.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+write.csv(SNP_sig_bonf_ind_seg, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/SNP_sig15_Bonf_ind_seg.txt")
+
+```
+
+The SNPs below are the significant after the correction above
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/SNP_sig15_Bonf_ind_seg.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image119.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Bellow we inserted  the **rsID** searched at SNPCHIMP
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/SNP_rsID_sig15_Bonf_ind_seg.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+### GALLO
+
+```{r eval=FALSE}
+# GALLO
+
+#import a QTL annotation file
+qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTLdb_release53_cattleARS_UCD1.gff.gz",file_type="gff")
+
+#import a gene annotation file
+gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
+
+#import MARKER files = the GWAS output
+gwas <- read.csv(file = "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/SNP_sig15_Bonf_ind_seg.csv")
+
+# Assuming "gwas" is your dataframe
+gwas <- subset(gwas, select = c(Chr, SNP, bp))
+
+
+colnames(gwas) <- c("CHR","SNP", "BP")
+
+
+#FINDING GENES AND QTLs ARROUND THE MARKER
+
+#FINDING GENES
+out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2, 
+                                            marker_file= gwas, 
+                                            method = "gene",
+                                            marker = "snp", 
+                                            interval = 50000, 
+                                            nThreads = NULL)
+
+write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_genes_extr_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_genes_extr_15.csv")
+
+#FINDING QTLs
+
+out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2, 
+                                          marker_file= gwas, 
+                                          method = "qtl",
+                                          marker = "snp", 
+                                          interval = 50000, 
+                                          nThreads = NULL)
+
+
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_qtl_extr_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+library(tidyverse)
+out.qtl.clean <- select(out.qtl, c("CHR", "SNP", "BP", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_qtl_extr_15.csv")
+```
+
+
+The GALLO output are bellow:
+
+**For GENES**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+**FOR QTLs**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+#### QTL enrichment on GALLO
+
+```{r eval=FALSE}
+#QTL enrichment analysis 
+out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "Name",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+
+# Sorting the dataframe in ascending order of adj.pval
+sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
+
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_enrich_qtl_genome_name_extr_15.csv")
+
+out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "QTL_type",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_enrich_qtl_genome_type_extr_15.csv")
+
+
+#Plots
+
+#Name
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL," - ","CHR",out.enrich_qtl_name$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered<-out.enrich_qtl_name[which(out.enrich_qtl_name$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+dev.off()
+QTLenrich_plot(out.enrich.filtered, x="ID", pval="adj.pval")
+
+
+#Type
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL," - ","CHR",out.enrich_qtl_type$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered_type<-out.enrich_qtl_type[which(out.enrich_qtl_type$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+dev.off()
+QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
+```
+
+
+**QTL Enrichment outcomes**
+
+**Enrichment by name** (enrichment analysis will be performed for each trait individually)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image121.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image122.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+### gPROFILER online
+
+From the online version of GPROFILER i got the following results.
+
+**Legend**
+<img src="image41.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image123.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image124.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+# GWAS on GCTA
 
 ```{r eval=FALSE}
 pheno <- read.table("/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt", header = T)
@@ -2177,7 +2537,7 @@ ggplot(don, aes(x = BPcum, y = logP)) +
 
 <img src="image105.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-# VEP - With Birth_year and Sampling_date
+# VEP
 
 After insert all **rsID** on VEP the summary is shown below:
 
@@ -2205,7 +2565,7 @@ Bellow I'm gonna show the "genome view" for each SNP (variant) recovered from VE
 
 *ps. the unique reference genome available in the VEP is the ARS-UCD1.3, which is not a problem once it is working with the rsID, which for sure is our variant.*
 
-# GALLO - with Birth_Year and Sampling_Date
+# GALLO
 
 ```{r eval=FALSE}
 # GALLO
@@ -2394,7 +2754,7 @@ knitr::kable(data)
 
 <img src="image116.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
-# GPROFILER ON-LINE with BY and SD
+# GPROFILER ON-LINE
 
 From the online version of GPROFILER i got the following results.
 
@@ -3144,3 +3504,370 @@ In our example:
 
 
 <img src="image103.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+
+
+
+
+
+# Storage 1
+
+
+
+# GWAS - EXTREME PHENO - WITH BY and SD
+
+## Data preparation
+
+I received from Umesh a e-mail informing the three categories that the animals could be sorted based on their cortisol concentration.
+
+<img src="image6.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+```{r eval=FALSE}
+
+pheno <- read.table("/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt", header = T)
+data_final <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits2.csv", header = T)
+ids_eq <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv", header = T)
+
+
+# Create an matrix with fixed effects with only those animals which also have phenotype and genotype
+data_final$cdn_id <- ids_eq$cdn_id[match(data_final$ID, ids_eq$elora_id)]
+fixeff <- data_final[,c("ID", "BIRTH_YEAR", "Sampling_date", "cdn_id")]
+fixeff <- fixeff[fixeff$cdn_id %in% pheno$cdn_id, ]
+fixeff$FID <- "HO"
+fixeff <- fixeff[, c("FID", "cdn_id", "BIRTH_YEAR", "Sampling_date")]
+
+# Now we are gona remove the intermediary animals from pheno object
+pheno$Categorical <- ifelse(pheno$cortisol >= 956, "H", 
+                           ifelse(pheno$cortisol <= 190.8, "L", "M"))
+table(pheno$Categorical)
+pheno <- pheno[pheno$Categorical != "M", ]
+pheno <- pheno[, c("FID", "cdn_id", "cortisol")]
+
+# Now we are going to remove from fixeff the animals which are not in pheno
+fixeff <- fixeff[fixeff$cdn_id %in% pheno$cdn_id,]
+
+#Checking if match the animals and order
+identical(fixeff$cdn_id, pheno$cdn_id)
+
+#Creating a file with animals to keep in the genotype file, we will use it on Plink
+to_keep_geno <- pheno[, c("FID", "cdn_id")]
+
+write.table(fixeff, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt", quote = F, row.names = F, col.names = T)
+write.table(pheno, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt", quote = F, row.names = F, col.names = T)
+write.table(to_keep_geno, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/to_keep_geno.txt", quote = F, row.names = F, col.names = F)
+
+```
+
+We ended up with  
+H (Hight) = 34 animals  
+L (Low)  = 37 animals
+Total = 71 animals
+
+On Plink we will remove all individuals from genotype files that are classified as Medium, keeping only the High and Low
+
+```{bash eval= FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/Geno_files_after_QC/genoplink_clean
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
+KEEP=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/to_keep_geno.txt
+
+plink2 --bfile ${DATA} --keep ${KEEP} --chr-set 29 --make-bed --out ${RESULT}
+```
+
+## GWAS on GCTA
+
+```{bash eval=FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result
+PHENO=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt
+FIXEFF=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt
+
+/home/local/bin/gcta \
+    --bfile ${DATA} \
+    --mlma-loco \
+    --pheno ${PHENO} \
+    --qcovar ${FIXEFF} \
+    --autosome-num 29 \
+    --autosome \
+    --out ${RESULT}
+```
+
+After ran the GWAS above I got the following message from the GCTA:
+
+<span style="color:red">**Error: analysis stopped because more than half of the variance components are constrained. The result would be unreliable. You may have a try of the option --reml-no-constrain.**</span>
+
+
+Than a ran this new code **with NO CONSTRAIN**
+
+```{bash eval=FALSE}
+#!/bin/bash
+
+DATA=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
+RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result_NO_CONSTRAIN
+PHENO=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt
+FIXEFF=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt
+
+/home/local/bin/gcta \
+    --bfile ${DATA} \
+    --reml-no-constrain \
+    --mlma-loco \
+    --pheno ${PHENO} \
+    --qcovar ${FIXEFF} \
+    --autosome-num 29 \
+    --autosome \
+    --out ${RESULT}
+
+```
+ 
+
+### Corrected Bonferroni for genome independent segments
+
+Now we are going to apply a correction for multiple testing modifying the Bonferroni test adjusting not for the total number of SNPs but for the number of the independent segments in the genome.
+
+```{r eval=FALSE}
+
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+gwas<- read.table(file = "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result_NO_CONSTRAIN.loco.mlma", 
+                  head=T, stringsAsFactors = F)
+
+
+gwas$Chr<- as.factor(gwas$Chr)
+gwas$logP<- -log10(gwas$p)
+rmv<- which(gwas$logP == "NaN")
+if (length(rmv) >=1) {gwas <- gwas[-rmv,]}
+
+bonf<- -log10(0.15/Me)
+
+library(GHap)
+ghap.manhattan(data=gwas,chr="Chr", bp="bp", y="logP", type="p", pch = 20, 
+               cex=1, lwd=1, ylab="", xlab="Chromossomes", 
+               main="GWAS Cortisol", backcolor="#F5EFE780", chr.ang=0,)
+abline(h=(bonf), col="red2")
+legend("topright", col="red2", lwd=2, c("Bonferroni corr. for ind. segments"), bty="n")
+
+
+library(tidyverse)
+
+SNP_sig_bonf_ind_seg <- filter(gwas, logP > bonf)
+write.table(SNP_sig_bonf_ind_seg, file = "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/SNP_sig15_Bonf_ind_seg.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+write.csv(SNP_sig_bonf_ind_seg, "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/SNP_sig15_Bonf_ind_seg.txt")
+
+```
+
+The SNPs below are the significant after the correction above
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/SNP_sig15_Bonf_ind_seg.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image119.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Bellow we inserted  the **rsID** searched at SNPCHIMP
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/SNP_rsID_sig15_Bonf_ind_seg.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+### GALLO
+
+```{r eval=FALSE}
+# GALLO
+
+#import a QTL annotation file
+qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTLdb_release53_cattleARS_UCD1.gff.gz",file_type="gff")
+
+#import a gene annotation file
+gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
+
+#import MARKER files = the GWAS output
+gwas <- read.csv(file = "/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/SNP_sig15_Bonf_ind_seg.csv")
+
+# Assuming "gwas" is your dataframe
+gwas <- subset(gwas, select = c(Chr, SNP, bp))
+
+
+colnames(gwas) <- c("CHR","SNP", "BP")
+
+
+#FINDING GENES AND QTLs ARROUND THE MARKER
+
+#FINDING GENES
+out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2, 
+                                            marker_file= gwas, 
+                                            method = "gene",
+                                            marker = "snp", 
+                                            interval = 50000, 
+                                            nThreads = NULL)
+
+write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_genes_extr_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_genes_extr_15.csv")
+
+#FINDING QTLs
+
+out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2, 
+                                          marker_file= gwas, 
+                                          method = "qtl",
+                                          marker = "snp", 
+                                          interval = 50000, 
+                                          nThreads = NULL)
+
+
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_qtl_extr_15.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+library(tidyverse)
+out.qtl.clean <- select(out.qtl, c("CHR", "SNP", "BP", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_qtl_extr_15.csv")
+```
+
+
+The GALLO output are bellow:
+
+**For GENES**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+**FOR QTLs**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+#### QTL enrichment on GALLO
+
+```{r eval=FALSE}
+#QTL enrichment analysis 
+out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "Name",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+
+# Sorting the dataframe in ascending order of adj.pval
+sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
+
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_enrich_qtl_genome_name_extr_15.csv")
+
+out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "QTL_type",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/EXTREM_PHENO_BY_SD/out_enrich_qtl_genome_type_extr_15.csv")
+
+
+#Plots
+
+#Name
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL," - ","CHR",out.enrich_qtl_name$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered<-out.enrich_qtl_name[which(out.enrich_qtl_name$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+dev.off()
+QTLenrich_plot(out.enrich.filtered, x="ID", pval="adj.pval")
+
+
+#Type
+
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL," - ","CHR",out.enrich_qtl_type$CHR,sep="")
+
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered_type<-out.enrich_qtl_type[which(out.enrich_qtl_type$adj.pval<0.05),]
+
+#Plotting the enrichment results for the QTL enrichment analysis
+dev.off()
+QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
+```
+
+
+**QTL Enrichment outcomes**
+
+**Enrichment by name** (enrichment analysis will be performed for each trait individually)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image121.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_extr_15.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image122.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+### gPROFILER online
+
+From the online version of GPROFILER i got the following results.
+
+**Legend**
+<img src="image41.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image123.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image124.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">

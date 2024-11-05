@@ -1,0 +1,4 @@
+"","QTL","N_QTLs","N_QTLs_db","Total_annotated_QTLs","Total_QTLs_db","pvalue","adj.pval","QTL_type"
+"2","Muscle carnosine content",3,67,5,163224,0.000000000660590855157922,0.00000000198177256547376,"Meat and Carcass"
+"3","Polyunsaturated fatty acid content",1,28,5,163224,0.00085743328417065,0.00128614992625598,"Meat and Carcass"
+"1","Body depth",1,616,5,163224,0.018728110951333,0.018728110951333,"Production"
