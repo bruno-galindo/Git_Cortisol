@@ -2098,31 +2098,248 @@ After ran the GWAS above I got the following message from the GCTA:
 
 As we got this error message, we needed to solve this problem, and for that we used the whole sample size (252 individuals) to estimate the variance components in GCTA, and after this, using this variance components from the whole sample we perfomed ths GWAS with the subset of individuals (34 High + 37 Low = 71)
 
+
+## BLUPF90+ GWAS
+
+### Files preparation
+
+Preparing files to run Variance components estimation using REML with AI (Average Information) algorithm.
+
+First you need to create a directory in your home directory, prepare and save the following files in:
+
+<ul>
+<li> Phenotype and Fixed effects file
+<li> Pedigree file
+<li> Genotype file
+<li> BlupF90+ executable file
+<li> RenumF90 executable file
+<li> Parameter file
+<ul>
+
+
+
+#### Phenotype and Fixed effects file
+
+The appearance of this file is like this:
+
+<img src="image95.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**FIRST COLUMN** = Animal ID  
+**SECOND COLUMN** = Phenotype  
+**THIRD COLUMN** = Fixed Effect 1  
+**FOURTH COLUMN** = Fixed Effect 2  
+
+To get in one file these four columns we need the following code:
+
+```{r eval=FALSE}
+
+fixeff <- read.table("/home/bambrozi/2_CORTISOL/GWAS/GWAS_plus_BY_Samp/fixeff.txt", header = T)
+pheno <- read.table("/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt", header = T)
+ids_eq <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv", header = T)
+
+fixeff <- fixeff[, c("cdn_id", "BIRTH_YEAR", "Sampling_date")]
+pheno <- pheno[,c("cdn_id", "cortisol")]
+
+# Load necessary libraries
+library(dplyr)
+
+# Merge pheno and fixeff data frames
+merged_data <- pheno %>% 
+  left_join(fixeff, by = "cdn_id")
+
+
+merged_data$iid <- ids_eq$iid[match(merged_data$cdn_id, ids_eq$cdn_id)]
+
+merged_data <- merged_data[, c("iid", "cortisol", "BIRTH_YEAR", "Sampling_date")]
+
+write.table(merged_data, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/fenofix.txt", col.names = F, quote = F, row.names = F)
+
+```
+
+
+The file should be saved as text file, with separation by space and no columns names.
+
+PS: if there are any **NA**, they sould be replaced by **9999**
+
+#### Pedigree file
+
+The appearance of this file is like this:
+
+<img src="image96.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**FIRST COLUMN** = Animal ID  
+**SECOND COLUMN** = Sire ID  
+**THIRD COLUMN** = Dam ID  
+
+The file should be saved as text file, with separation by space and no columns names.
+
+We used the code below to remove the commas of a .csv file to a file with sepation by spaces.
+```{bash eval=FALSE}
+# to replace comma for space in the .csv file with the equivalence among IDs
+sed -i 's/,/ /g' bruno_ids.csv
+```
+
+#### Genotype file
+
+The appearance of this file is like this:
+
+<img src="image97.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**FIRST COLUMN** = Animal ID
+**SECOND COLUMN** = Genotypes (0, 1 and 2 format)
+
+The file should be saved as text file, with separation by space and no columns names.
+
+We  used the code below to replace the cid for iid. First we merge using the second column of the firs file, and the first column of the second file. Then we use again the command awk to keep only the third and fifth columsn and sabe in a different object.
+
+
+```{bash eval=FALSE}
+# Using the awk function to merge the two files and the second awk to select only the 3rd and 5fh columns
+awk 'FNR==NR {a[$2]=$0; next} {print a[$1], $0}' bruno_ids.csv bruno_gntps.txt | awk '{print$3,$5}' > bruno_gntps_iid
+```
+
+### Download the executable files
+
+Download from this website <https://nce.ads.uga.edu/html/projects/programs/Linux/64bit/>:
+<ul>
+<li> BlupF90+
+<li> renumF90
+<ul>
+
+### Parameter file
+
+The appearance of this file is like this:
+
+<img src="image126.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<ul>
+<li> **DATAFILE**: bellow this line you need to inform the name of the file with phenotype and fixed effects. As before running BLUPF90 on server you are going to direct the terminal to the directory where all these files are placed you only need to inform the name.
+<li> **TRAITS**: below this line you need to inform which column are the phenotype date in the previous file, in this example, 2.
+<li> **FIELDS_PASSED TO OUTPUT**:
+<li> **WEIGHT (S)**:
+<li> **RESIDUAL VARIANCE**: for the firs run you need to inform the value of 1.0, for the second you can pick the variance from the firs run's output.
+<li> **EFFECT**: you will inform your first effect, in this example, Birth Year, which is in the column 3, and the word **cross numer** because is a number.
+<li> **EFFECT**: you should provide the next effect, in this example, sample date, as sample date has one non numeric character you should inform as **cross alpha**, in this example column 4.
+<li> **EFFECT**: now I'm providing my animal ID information, in this example column 1, and again **cross alpha** because has number and letters in the ID. I'm also informing that this effect is **RANDOM**, and that is my **animal** effect.
+<li> **FILE**: bellow this line I need to provide the pedigree file. Again, as I'm already in the directory which contain the pedigree file I only need to provide the file name.
+<li> **FILE-POS**: Here I'll inform which columns should be considered in the pedigree file, in this situation, **1 2 3 0 0**.
+<li> **PED_DEPTH**: Now we can inform the depth we want the software considers the pedigree, or if we leave **0** it will the maximum possible.
+<li> **(CO) VARIANCES**: Here you should provide the Variance/Co-variance matrix, like as for residual variance in the first run we set up to 0 in this example that we don´t have to imagine any co-variance, but if you know that exist variance among you effects you shoul set up **XXX** for ....
+<li> **OPTION method**: VCE (Variance Component Estimation).
+<li> **OPTION OrigID**: this will keep the original ID informed.
+<li> **OPTION missing 9999**: you are informing that missing values will appear as **9999**
+<li> **OPTION se_covar_function**: H2_1 g_3_3_1_1/(g_3_3_1_1+r_1_1)
+<ul> 
+<li> **H2_1**: the name that your function will appear on the output files.
+<li> **g_3_3**: you are asking for genetic variance estimation for the 3rd informed effect.
+<li> **_1_1**: this effect is in the 1st column. 
+<li> **/(g_3_3_1_1+r_1_1)**: to get the total phenotipic variance, you are summing to genetic variance the residual variance of the effect in column 1.
+<ul>
+<ul>
+
+### Running renumF90 and BlupF90+
+
+1. Go to the server you wanna run this analysis, for instance, **grand**
+
+2. Now go to the directory you have created to run this analysis where that set of files are placed.
+```{bash eval=F}
+ssh grand
+```
+
+3. Make the renumF90 and BlupF90+ files executables
+```{bash eval=F}
+chmod +x renumf90
+chmod +x blupf90+
+```
+
+4. Run renumF90
+```{bash eval=F}
+./renumf90
+```
+When you run the code above, it will as you the name of your parameter card.
+
+renumF90 will generate a new parameter card called **renf90.par**
+
+5. Run blupf90+
+```{bash eval=F}
+./blupf90+
+```
+blupf90+ will ask you for parameter's card name, now you should provide with the new one **renf90.par**
+
+blupF90+ will generate the **blupf90.log** file with the results.
+
+<img src="image125.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Now you should update you **renf90.par** file with these informations from the .log file
+
+Copy **Residual Variance** from blupf90.log and will paste on renf90.par **RANDOM_RESIDUAL_VALUES**
+Copy **Genetic variance for effect x** from blupf90.log and will paste on renf90.par **(CO) VARIANCE**
+
+6. 2nd blupf90+ run
+```{bash eval=F}
+./blupf90+
+```
+blupf90+ will ask you for parameter's card name, now you should provide with the UPDATED **renf90.par**
+
+If the **Residual Variance** and **Genetic variance for effect x** didn't change in your blupf90.log the analysis ended, but if this value vary, you should update again the renf90.par and run again blupf90+ until this values don't change more.
+
+
+### GWAS for High and Low cortisol animals
+
+Now we'll run a new analysis using the Variance Components Estimation from the previous step to perform the GWAS.
+
+To perform this first we need a Phenotype file, and a Genotype file only with the 71 animals (High=34 and Low=37)
+
+
 STOPSTOP
 
 
-Than a ran this new code **with NO CONSTRAIN**
+### Results
 
-```{bash eval=FALSE}
-#!/bin/bash
+We have 2 different output files
 
-DATA=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/geno_extreme
-RESULT=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/GWAS_result_NO_CONSTRAIN
-PHENO=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/pheno.txt
-FIXEFF=/home/bambrozi/2_CORTISOL/GWAS/EXTREM_PHENO_BY_SD/fixeff.txt
+1) Variance components: blupf90.log  
 
-/home/local/bin/gcta \
-    --bfile ${DATA} \
-    --reml-no-constrain \
-    --mlma-loco \
-    --pheno ${PHENO} \
-    --qcovar ${FIXEFF} \
-    --autosome-num 29 \
-    --autosome \
-    --out ${RESULT}
+<img src="image102.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-```
- 
+In this file we can find the heritabilit (SD) and for instance the convergence (similarity)
+
+2) Solutions: solutions.orig  
+In this file we will find the solutions (results) for each effect
+
+In our example:
+
+<ul>
+<li> **EFFECT 1**: Birth Year, has 4 levels (2018, 2019, 2020 and 2021), and the solution that for this fixed effect is how much each level add.
+<li> **EFFECT 2**: Sampling date, has 23 levels, and the solutions
+<li> **EFFECT 3**: Animal random effect, has one for each animal and it is the EBV or GEBV.
+
+
+
+
+<img src="image103.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+
+
+### Variance components estimation with the whole sample
+We'LL estimate the GRM on GCTA fro all 252 animals.
+
+First I will need to build a 
+
+### GWAS
+
+
+Now we'll estimate the Variance Components for all 252 animals on BLUPF90+
+With the Variance Components Estimations we'll perform a GWAS on BLUPF90+ only for the animals with Extreme Phenotypes.
+
+
+
+
+
+
+
+
 
 ### Corrected Bonferroni for genome independent segments
 
