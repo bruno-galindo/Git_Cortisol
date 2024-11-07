@@ -2290,9 +2290,32 @@ Now we'll run a new analysis using the Variance Components Estimation from the p
 
 To perform this first we need a Phenotype file, and a Genotype file only with the 71 animals (High=34 and Low=37)
 
+#### Updating the files
+I used the code bellow to remove individuals with MEDIUM cortisol Phenotype 
+```{r eval=FALSE}
+phenofix <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/fenofix.txt")
 
-STOPSTOP
 
+# Now we are gona remove the intermediary animals from pheno object
+phenofix$Categorical <- ifelse(phenofix$V2 >= 956, "H", 
+                            ifelse(phenofix$V2 <= 190.8, "L", "M"))
+table(phenofix$Categorical)
+
+phenofix <- phenofix[phenofix$Categorical != "M", ]
+
+phenofix <- phenofix[, c("V1", "V2", "V3", "V4")]
+
+write.table(phenofix, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/fenofix.txt", col.names = F, row.names = F, quote = F)
+
+```
+
+I used this command line bellow to remove the individuals with MEDIUM phenotypes.
+```{bash eval= FALSE}
+awk 'NR==FNR{ids[$1]; next} $1 in ids' fenofix.txt bruno_gntps_iid > bruno_gntps_iid_71
+```
+
+I ran renum.par
+I was reading BLUPF90 manual to discover how to get the GWAS
 
 ### Results
 
