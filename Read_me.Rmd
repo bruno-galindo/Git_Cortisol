@@ -2101,6 +2101,13 @@ As we got this error message, we needed to solve this problem, and for that we u
 
 ## BLUPF90+ GWAS
 
+According to the BLUPF90+ tutorial:
+
+    ssGWAS is an iterative procedure with 2 steps:
+    0*) Quality control
+    1) prediction of GEBV with ssGBLUP
+    2) prediction of SNP marker effects based on the GEBV
+
 ### Files preparation
 
 Preparing files to run Variance components estimation using REML with AI (Average Information) algorithm.
@@ -2113,6 +2120,8 @@ First you need to create a directory in your home directory, prepare and save th
 <li> Genotype file
 <li> BlupF90+ executable file
 <li> RenumF90 executable file
+<li> preGSf90 executable file
+<li> postGSf90 executable file
 <li> Parameter file
 <ul>
 
@@ -2128,6 +2137,8 @@ The appearance of this file is like this:
 **SECOND COLUMN** = Phenotype  
 **THIRD COLUMN** = Fixed Effect 1  
 **FOURTH COLUMN** = Fixed Effect 2  
+
+First we are going to generate a Phenotype_Fixed_Effect file with the whole sample (252 individuals) that we are going to use for the Variance Components Estimation.
 
 To get in one file these four columns we need the following code:
 
@@ -2181,6 +2192,8 @@ sed -i 's/,/ /g' bruno_ids.csv
 
 #### Genotype file
 
+First we are going to generate a Genotype file with the whole sample (252 individuals) that we are going to use for the Variance Components Estimation.
+
 The appearance of this file is like this:
 
 <img src="image97.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
@@ -2202,15 +2215,156 @@ awk 'FNR==NR {a[$2]=$0; next} {print a[$1], $0}' bruno_ids.csv bruno_gntps.txt |
 
 Download from this website <https://nce.ads.uga.edu/html/projects/programs/Linux/64bit/>:
 <ul>
-<li> BlupF90+
-<li> renumF90
+<li> BlupF90+ = we will use to estimate the Variance components and GEBVs
+<li> renumF90 = we will use to renumerate the files
+<li> preGSf90 = we will use to perform the Quality control
+<li> postGSf90 = we will use for GWAS
 <ul>
 
-### Parameter file
+### Parameter file for Quality Control
 
-The appearance of this file is like this:
+But, before running the GEBV we will first perform one additional step to "CLEAN" our genotypes. Actually BLUPF90 by default perform a data cleaning with pre set parameters, but as HWE is not used by default, we will perform this additional step.
 
-<img src="image126.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+The Parameter card for this step is the parameter bellow:
+
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renum_QC.par
+
+```{bash eval= FALSE}
+
+DATAFILE
+fenofix.txt
+TRAITS
+2
+FIELDS_PASSED TO OUTPUT
+
+WEIGHT(S)
+
+RESIDUAL_VARIANCE
+1.0
+EFFECT
+3 cross numer
+EFFECT
+4 cross alpha
+EFFECT
+1 cross alpha
+RANDOM
+animal
+FILE
+bruno_ped_iid_blup.txt
+FILE_POS
+1 2 3 0 0
+SNP_FILE
+bruno_gntps_iid
+PED_DEPTH
+0
+(CO)VARIANCES
+1.0
+
+OPTION outcallrate
+OPTION saveCleanSNPs
+OPTION minfreq 0.01
+```
+
+<ul>
+<li> **DATAFILE**: bellow this line you need to inform the name of the file with phenotype and fixed effects. As before running BLUPF90 on server you are going to direct the terminal to the directory where all these files are placed you only need to inform the name.
+<li> **TRAITS**: below this line you need to inform which column are the phenotype date in the previous file, in this example, 2.
+<li> **FIELDS_PASSED TO OUTPUT**:
+<li> **WEIGHT (S)**:
+<li> **RESIDUAL VARIANCE**: for the firs run you need to inform the value of 1.0, for the second you can pick the variance from the firs run's output.
+<li> **EFFECT**: you will inform your first effect, in this example, Birth Year, which is in the column 3, and the word **cross numer** because is a number.
+<li> **EFFECT**: you should provide the next effect, in this example, sample date, as sample date has one non numeric character you should inform as **cross alpha**, in this example column 4.
+<li> **EFFECT**: now I'm providing my animal ID information, in this example column 1, and again **cross alpha** because has number and letters in the ID. I'm also informing that this effect is **RANDOM**, and that is my **animal** effect.
+<li> **FILE**: bellow this line I need to provide the pedigree file. Again, as I'm already in the directory which contain the pedigree file I only need to provide the file name.
+<li> **FILE-POS**: Here I'll inform which columns should be considered in the pedigree file, in this situation, **1 2 3 0 0**.
+<li> **PED_DEPTH**: Now we can inform the depth we want the software considers the pedigree, or if we leave **0** it will the maximum possible.
+<li> **(CO) VARIANCES**: Here you should provide the Variance/Co-variance matrix, like as for residual variance in the first run we set up to 0 in this example that we don´t have to imagine any co-variance, but if you know that exist variance among you effects you shoul set up **XXX** for ....
+<li> **OPTION outcallrate**: Save the call rate information on SNP markers in the file.
+<li> **OPTION saveCleanSNPs**: This option generates 4 new files. We assume snpfile as a marker file.
+<ul>
+<li> snpfile_clean = new SNP marker file.
+<li> snpfile_clean_XrefID = new cross-reference file.
+<li> snpfile_SNPs_removed = a list of removed markers.
+<li> snpfile_Animals_removed = a list of removed animals.
+</ul>
+<li> **OPTION minfreq 0.01**: Minimum allele frequency to retain the marker.
+</ul>
+
+Use this parameter file to generate **renf90.par** and than run PREGSF90 to run renf90.par and perform the Quality Control.
+
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_DataClean.par
+
+```{bash eval= FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+ renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        23 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   1.0000    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   1.0000    
+OPTION SNP_file bruno_gntps_iid
+OPTION outcallrate
+OPTION saveCleanSNPs
+OPTION minfreq 0.01
+
+
+```
+
+The parameter card above, will be used with the program **preGS90** to generate the Clean Genotype files after Quality Control.
+
+We can copy the same parameter card above and create the following parameter card:
+
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_VarCompEst.par
+
+```{bash eval= FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+ renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        23 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   1.0000    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   1.0000    
+OPTION SNP_file bruno_gntps_iid_clean
+OPTION method VCE
+OPTION origID
+OPTION missing 9999
+OPTION se_covar_function H2_1 g_3_3_1_1/(g_3_3_1_1+r_1_1)
+```
 
 <ul>
 <li> **DATAFILE**: bellow this line you need to inform the name of the file with phenotype and fixed effects. As before running BLUPF90 on server you are going to direct the terminal to the directory where all these files are placed you only need to inform the name.
@@ -2234,9 +2388,83 @@ The appearance of this file is like this:
 <li> **g_3_3**: you are asking for genetic variance estimation for the 3rd informed effect.
 <li> **_1_1**: this effect is in the 1st column. 
 <li> **/(g_3_3_1_1+r_1_1)**: to get the total phenotipic variance, you are summing to genetic variance the residual variance of the effect in column 1.
-<ul>
-<ul>
+</ul>
+</ul>
 
+In the parameter card above, we remove the option for Quality Control and added options for Variance Components Estimation, for Missing data, for origID and for heritability estimation, but the MOST IMPORTANT PART is we need to change the OPTION SNP_FILE, replacing the original genotype file, for the "clean" version generated in the previous step.
+
+Now we are going to run the parameter card above to generate the Variance Components that will be placed in the file: 
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/blupf90.log
+
+**blupf90.log**  
+<img src="image128.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+STOPSTOP
+Stop Analysis here on nov/8th
+Now that we have the Variance components we go for the next step:
+- Prediction of SNP marker effects based on the GEBV
+- GWAS for High and Low cortisol animals
+
+To do this, I'll: 
+generate the Phenotype_FixEff file like bellow
+generate the genotype file like bellow
+Perform the QUALITY CONTROL for the new (71 samples) genotype file
+Add the VCE from the 252 data set in the parameter card
+Generate the GEBV
+Run GWAS
+
+
+## Prediction of SNP marker effects based on the GEBV
+### GWAS for High and Low cortisol animals
+
+Now we'll run a new analysis using the Variance Components Estimation from the previous step to perform the GWAS.
+
+To perform this first we need a Phenotype file, and a Genotype file only with the 71 animals (High=34 and Low=37)
+
+#### Updating the files
+##### Phenotype and Fixed Effects files
+
+I used the code bellow to remove individuals with MEDIUM cortisol Phenotype 
+```{r eval=FALSE}
+phenofix <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/fenofix.txt")
+
+
+# Now we are gona remove the intermediary animals from pheno object
+phenofix$Categorical <- ifelse(phenofix$V2 >= 956, "H", 
+                            ifelse(phenofix$V2 <= 190.8, "L", "M"))
+table(phenofix$Categorical)
+
+phenofix <- phenofix[phenofix$Categorical != "M", ]
+
+phenofix <- phenofix[, c("V1", "V2", "V3", "V4")]
+
+write.table(phenofix, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/fenofix.txt", col.names = F, row.names = F, quote = F)
+
+```
+
+##### Genotype files
+I used this command line bellow to remove the individuals with MEDIUM phenotypes.
+```{bash eval= FALSE}
+awk 'NR==FNR{ids[$1]; next} $1 in ids' fenofix.txt bruno_gntps_iid > bruno_gntps_iid_71
+```
+
+#### Running renum.par
+
+#### Running renf90.par for Quality Control
+
+#### Running renf90.par for GEBV estimation
+
+#### Running renf90.par for GWAS
+
+
+### Parameter file
+
+
+
+
+
+
+## Prediction of GEBV with ssGBLUP
 ### Running renumF90 and BlupF90+
 
 1. Go to the server you wanna run this analysis, for instance, **grand**
@@ -2284,37 +2512,15 @@ blupf90+ will ask you for parameter's card name, now you should provide with the
 If the **Residual Variance** and **Genetic variance for effect x** didn't change in your blupf90.log the analysis ended, but if this value vary, you should update again the renf90.par and run again blupf90+ until this values don't change more.
 
 
-### GWAS for High and Low cortisol animals
+**blupf90.log**  
+<img src="image128.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
-Now we'll run a new analysis using the Variance Components Estimation from the previous step to perform the GWAS.
-
-To perform this first we need a Phenotype file, and a Genotype file only with the 71 animals (High=34 and Low=37)
-
-#### Updating the files
-I used the code bellow to remove individuals with MEDIUM cortisol Phenotype 
-```{r eval=FALSE}
-phenofix <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/fenofix.txt")
-
-
-# Now we are gona remove the intermediary animals from pheno object
-phenofix$Categorical <- ifelse(phenofix$V2 >= 956, "H", 
-                            ifelse(phenofix$V2 <= 190.8, "L", "M"))
-table(phenofix$Categorical)
-
-phenofix <- phenofix[phenofix$Categorical != "M", ]
-
-phenofix <- phenofix[, c("V1", "V2", "V3", "V4")]
-
-write.table(phenofix, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/fenofix.txt", col.names = F, row.names = F, quote = F)
-
-```
-
-I used this command line bellow to remove the individuals with MEDIUM phenotypes.
-```{bash eval= FALSE}
-awk 'NR==FNR{ids[$1]; next} $1 in ids' fenofix.txt bruno_gntps_iid > bruno_gntps_iid_71
-```
+**Parameter card**  
+<img src="image127.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
 
 I ran renum.par
+
+
 I was reading BLUPF90 manual to discover how to get the GWAS
 
 ### Results
