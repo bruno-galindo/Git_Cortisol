@@ -2221,6 +2221,21 @@ Download from this website <https://nce.ads.uga.edu/html/projects/programs/Linux
 <li> postGSf90 = we will use for GWAS
 <ul>
 
+### SNP MAP
+
+```{r eval = FALSE}
+mapfile <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/DGVsnpinfo.2404.ho", header = T)
+
+colnames(mapfile)
+
+colnames(mapfile) <- c("SNP_ID", "CHR", "POS")
+
+mapfile <- mapfile[,c("CHR", "POS", "SNP_ID")]
+
+write.table(mapfile, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/snpmap.txt", col.names = T, row.names = F, quote = F)
+```
+
+
 ### Parameter file for Quality Control
 
 But, before running the GEBV we will first perform one additional step to "CLEAN" our genotypes. Actually BLUPF90 by default perform a data cleaning with pre set parameters, but as HWE is not used by default, we will perform this additional step.
@@ -2259,10 +2274,11 @@ PED_DEPTH
 0
 (CO)VARIANCES
 1.0
-
 OPTION outcallrate
 OPTION saveCleanSNPs
 OPTION minfreq 0.01
+OPTION map_file snpmap.txt
+OPTION excludeCHR 30 31
 ```
 
 <ul>
@@ -2287,11 +2303,47 @@ OPTION minfreq 0.01
 <li> snpfile_Animals_removed = a list of removed animals.
 </ul>
 <li> **OPTION minfreq 0.01**: Minimum allele frequency to retain the marker.
+<li> **OPTION map_file snpmap.txt**: This option will upload the SNP MAP
+<li> **OPTION excludeCHR 30 31**: This option will remove **sexual chromosome** that is the 30 and 31
 </ul>
 
-Use this parameter file to generate **renf90.par** and than run PREGSF90 to run renf90.par and perform the Quality Control.
+To run any softwere from Blupf90 suit we will perfom always in this way:
 
+1. Go to the server you wanna run this analysis, for instance, **grand**
+```{bash eval=F}
+ssh grand
+```
+
+2. Now go to the directory you have created to run this analysis where that set of files are placed.
+```{bash eval = F}
+cd /home/bambrozi/2_CORTISOL/GWAS/BLUPF90
+```
+
+3. Make the renumF90 and BlupF90+ files executables
+```{bash eval=F}
+chmod +x renumf90
+chmod +x blupf90+
+```
+
+4. Run renumF90
+```{bash eval=F}
+./renumf90
+```
+
+When you run the code above, it will ask you the name of your parameter card, for this step is **renum_QC.par**.
+
+The command above will generate couple files, among them **renf90.par**
+
+We modified **renf90.par** in:
+<ul>
+<li> renf90_DataClean.par
+<li> renf90_VarCompEst.par
+</ul>
+
+The parameter card to perform the Quality Control is: 
 /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_DataClean.par
+
+It will be run using the software pre **preGS90** to generate the Clean Genotype and SNP_MAP files after Quality Control.
 
 ```{bash eval= FALSE}
 # BLUPF90 parameter file created by RENUMF90
@@ -2323,15 +2375,17 @@ OPTION SNP_file bruno_gntps_iid
 OPTION outcallrate
 OPTION saveCleanSNPs
 OPTION minfreq 0.01
-
+OPTION map_file snpmap.txt
+OPTION excludeCHR 30 31
 
 ```
 
-The parameter card above, will be used with the program **preGS90** to generate the Clean Genotype files after Quality Control.
 
-We can copy the same parameter card above and create the following parameter card:
 
+The second parameter card used for Variance Components Estimation (VCE) is the following:
 /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_VarCompEst.par
+
+It will be run using the software pre **blupf90+** to generate the VCE.
 
 ```{bash eval= FALSE}
 # BLUPF90 parameter file created by RENUMF90
@@ -2360,25 +2414,18 @@ renadd03.ped
 (CO)VARIANCES
    1.0000    
 OPTION SNP_file bruno_gntps_iid_clean
+OPTION no_quality_control
 OPTION method VCE
 OPTION origID
 OPTION missing 9999
 OPTION se_covar_function H2_1 g_3_3_1_1/(g_3_3_1_1+r_1_1)
+
+
 ```
 
 <ul>
-<li> **DATAFILE**: bellow this line you need to inform the name of the file with phenotype and fixed effects. As before running BLUPF90 on server you are going to direct the terminal to the directory where all these files are placed you only need to inform the name.
-<li> **TRAITS**: below this line you need to inform which column are the phenotype date in the previous file, in this example, 2.
-<li> **FIELDS_PASSED TO OUTPUT**:
-<li> **WEIGHT (S)**:
-<li> **RESIDUAL VARIANCE**: for the firs run you need to inform the value of 1.0, for the second you can pick the variance from the firs run's output.
-<li> **EFFECT**: you will inform your first effect, in this example, Birth Year, which is in the column 3, and the word **cross numer** because is a number.
-<li> **EFFECT**: you should provide the next effect, in this example, sample date, as sample date has one non numeric character you should inform as **cross alpha**, in this example column 4.
-<li> **EFFECT**: now I'm providing my animal ID information, in this example column 1, and again **cross alpha** because has number and letters in the ID. I'm also informing that this effect is **RANDOM**, and that is my **animal** effect.
-<li> **FILE**: bellow this line I need to provide the pedigree file. Again, as I'm already in the directory which contain the pedigree file I only need to provide the file name.
-<li> **FILE-POS**: Here I'll inform which columns should be considered in the pedigree file, in this situation, **1 2 3 0 0**.
-<li> **PED_DEPTH**: Now we can inform the depth we want the software considers the pedigree, or if we leave **0** it will the maximum possible.
-<li> **(CO) VARIANCES**: Here you should provide the Variance/Co-variance matrix, like as for residual variance in the first run we set up to 0 in this example that we don´t have to imagine any co-variance, but if you know that exist variance among you effects you shoul set up **XXX** for ....
+<li> **OPTION SNP_file bruno_gntps_iid_clean**: we are going to inform the genotype file generated in the previous step (the Quality Control). Blup will create an file with the same name that the original genotype file, and add the sufix **_clean**
+<li>**OPTION no_quality_control** we need to set up this option because we performed Quality Control in the previous step and now we don't need that Blupf90+ perform again. Blupf90+ by default perform quality control, so if we do not want, we need to specify.
 <li> **OPTION method**: VCE (Variance Component Estimation).
 <li> **OPTION OrigID**: this will keep the original ID informed.
 <li> **OPTION missing 9999**: you are informing that missing values will appear as **9999**
@@ -2393,26 +2440,45 @@ OPTION se_covar_function H2_1 g_3_3_1_1/(g_3_3_1_1+r_1_1)
 
 In the parameter card above, we remove the option for Quality Control and added options for Variance Components Estimation, for Missing data, for origID and for heritability estimation, but the MOST IMPORTANT PART is we need to change the OPTION SNP_FILE, replacing the original genotype file, for the "clean" version generated in the previous step.
 
-Now we are going to run the parameter card above to generate the Variance Components that will be placed in the file: 
+The Variance Components will be placed in the file: 
 /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/blupf90.log
 
 **blupf90.log**  
 <img src="image128.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
-STOPSTOP
-Stop Analysis here on nov/8th
+
+Now you should update you **renf90_VarCompEst.par** file with these informations from the .log file
+
+Copy **Residual Variance** from blupf90.log and will paste on renf90_VarCompEst.par **RANDOM_RESIDUAL_VALUES**
+Copy **Genetic variance for effect x** from blupf90.log and will paste on renf90_VarCompEst.par **(CO) VARIANCE**
+
+
+If the **Residual Variance** and **Genetic variance for effect x** didn't change in your blupf90.log the analysis ended, but if this value vary, you should update again the renf90.par and run again blupf90+ until this values don't change more.
+
+
+**blupf90.log**  
+<img src="image128.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Parameter card**  
+<img src="image127.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+
+
 Now that we have the Variance components we go for the next step:
-- Prediction of SNP marker effects based on the GEBV
-- GWAS for High and Low cortisol animals
+<ul>
+<li> Prediction of SNP marker effects based on the GEBV
+<li> GWAS for High and Low cortisol animals
+</ul>
 
 To do this, I'll: 
-generate the Phenotype_FixEff file like bellow
-generate the genotype file like bellow
-Perform the QUALITY CONTROL for the new (71 samples) genotype file
-Add the VCE from the 252 data set in the parameter card
-Generate the GEBV
-Run GWAS
-
+<ul>
+<li> generate the Phenotype_FixEff file like bellow
+<li> generate the genotype file like bellow
+<li> Perform the QUALITY CONTROL for the new (71 samples) genotype file
+<li> Add the VCE from the 252 data set in the parameter card
+<li> Generate the GEBV
+<li> Run GWAS
+</ul>
 
 ## Prediction of SNP marker effects based on the GEBV
 ### GWAS for High and Low cortisol animals
@@ -2448,80 +2514,356 @@ I used this command line bellow to remove the individuals with MEDIUM phenotypes
 awk 'NR==FNR{ids[$1]; next} $1 in ids' fenofix.txt bruno_gntps_iid > bruno_gntps_iid_71
 ```
 
-#### Running renum.par
+#### Running renum_QC.par
 
-#### Running renf90.par for Quality Control
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/renum_QC.par
 
-#### Running renf90.par for GEBV estimation
+```{bash eval = FALSE}
+DATAFILE
+fenofix.txt
+TRAITS
+2
+FIELDS_PASSED TO OUTPUT
 
-#### Running renf90.par for GWAS
+WEIGHT(S)
 
-
-### Parameter file
-
-
-
-
-
-
-## Prediction of GEBV with ssGBLUP
-### Running renumF90 and BlupF90+
-
-1. Go to the server you wanna run this analysis, for instance, **grand**
-
-2. Now go to the directory you have created to run this analysis where that set of files are placed.
-```{bash eval=F}
-ssh grand
+RESIDUAL_VARIANCE
+77182
+EFFECT
+3 cross numer
+EFFECT
+4 cross alpha
+EFFECT
+1 cross alpha
+RANDOM
+animal
+FILE
+bruno_ped_iid_blup.txt
+FILE_POS
+1 2 3 0 0
+SNP_FILE
+bruno_gntps_iid_71
+PED_DEPTH
+0
+(CO)VARIANCES
+28212
+OPTION outcallrate
+OPTION saveCleanSNPs
+OPTION minfreq 0.01
+OPTION map_file snpmap.txt
+OPTION excludeCHR 30 31
 ```
 
-3. Make the renumF90 and BlupF90+ files executables
-```{bash eval=F}
-chmod +x renumf90
-chmod +x blupf90+
+
+We modified **renf90.par** in e copies:
+<ul>
+<li> renf90_DataClean.par
+<li> renf90_ssGWAS1_Ginv.par
+<li> renf90_ssGWAS2_SNPeff.par
+</ul>
+
+
+#### Running renf90_DataClean.par for Quality Control
+
+To run the parameter card bellow we are going to use the software **presGSf90**
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/renf90_DataClean.par
+
+```{bash eval = FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+ renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        22 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   77182.    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   28212.    
+OPTION SNP_file bruno_gntps_iid_71
+OPTION outcallrate
+OPTION saveCleanSNPs
+OPTION minfreq 0.01
+OPTION map_file snpmap.txt
+OPTION excludeCHR 30 31
 ```
 
-4. Run renumF90
-```{bash eval=F}
-./renumf90
+#### Running renf90_ssGWAS1_Ginv.par for Ginv estimation
+
+May be necessary to run the command bellow on the server
+Setting the stack size to "unlimited" allows the program to allocate memory for these large structures without hitting stack limits. By removing stack size limits, BLUPF90 is less likely to encounter **segmentation faults** or memory allocation issues that arise when the stack space is insufficient for the computations needed.
+```{bash eval = FALSE}
+ulimit -s unlimited
 ```
-When you run the code above, it will as you the name of your parameter card.
 
-renumF90 will generate a new parameter card called **renf90.par**
+The parameter card bellow we are going to run using the software **blupf90+**:
 
-5. Run blupf90+
-```{bash eval=F}
-./blupf90+
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/renf90_ssGWAS1_Ginv.par
+
+```{bash eval=FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+ renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        22 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   77182.    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   28212.    
+OPTION SNP_file bruno_gntps_iid_71_clean
+OPTION no_quality_control
+OPTION origID
+OPTION missing 9999
+OPTION saveGInverse
+OPTION saveA22Inverse
+OPTION snp_p_value
 ```
-blupf90+ will ask you for parameter's card name, now you should provide with the new one **renf90.par**
 
-blupF90+ will generate the **blupf90.log** file with the results.
 
-<img src="image125.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+#### Running renf90_ssGWAS2_SNPeff.par for GWAS
 
-Now you should update you **renf90.par** file with these informations from the .log file
+The parameter card bellow we are going to run using the software **postGSf90**:
 
-Copy **Residual Variance** from blupf90.log and will paste on renf90.par **RANDOM_RESIDUAL_VALUES**
-Copy **Genetic variance for effect x** from blupf90.log and will paste on renf90.par **(CO) VARIANCE**
-
-6. 2nd blupf90+ run
-```{bash eval=F}
-./blupf90+
+```{bash eval= FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+ renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        22 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   77182.    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   28212.    
+OPTION SNP_file bruno_gntps_iid_71_clean
+OPTION origID
+OPTION no_quality_control
+OPTION readGInverse
+OPTION readA22Inverse
+OPTION map_file snpmap.txt_clean
+OPTION snp_p_value
+OPTION Manhattan_plot_R
+OPTION Manhattan_plot 
 ```
-blupf90+ will ask you for parameter's card name, now you should provide with the UPDATED **renf90.par**
 
-If the **Residual Variance** and **Genetic variance for effect x** didn't change in your blupf90.log the analysis ended, but if this value vary, you should update again the renf90.par and run again blupf90+ until this values don't change more.
-
-
-**blupf90.log**  
-<img src="image128.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
-
-**Parameter card**  
-<img src="image127.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
-
-I ran renum.par
+This code will generate several files, among them:
+<ul>
+<li> **chrsnp_pval**: which has the -log10(pvalue) the 3rd column
+<li> **Pft1e3.R**: a r-code to generate the Manhattan plot in R
+</ul>
 
 
-I was reading BLUPF90 manual to discover how to get the GWAS
+#### Manhattan Plots for BLUPF90 GWAS
+To make the Manhattan Plot considering Genome Independent Segment we should run the code bellow. This code has part of the code in the file **Pft1e3.R**
+
+```{r eval=FALSE}
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+# Calculate Bonferroni threshold (already done)
+bonf <- -log10(0.05 / Me)
+
+
+setwd("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO")
+# Read in and process data for Manhattan plot
+yyy1 <- read.table("chrsnp_pval")
+yyy <- yyy1[order(yyy1$V4), ]
+zzz <- yyy[which(yyy$V1 == 1 & yyy$V2 == 3), ]
+n <- nrow(zzz)
+y <- zzz[, 4]
+x <- zzz[, 3]
+chr1 <- zzz[, 5]
+chr <- NULL
+pos <- NULL
+
+for (i in unique(yyy$V5)) {
+  zz <- yyy[yyy$V5 == i, ]
+  key <- zz$V4
+  medio <- round(nrow(zz) / 2, 0)
+  z <- key[medio]
+  pos <- c(pos, z)
+}
+
+chrn <- unique(yyy$V5)
+one <- which(chr1 %% 4 == 0)
+two <- which(chr1 %% 4 == 1)
+three <- which(chr1 %% 4 == 2)
+four <- which(chr1 %% 4 == 3)
+chr[one] <- "darkgoldenrod"
+chr[two] <- "darkorchid"
+chr[three] <- "blue"
+chr[four] <- "forestgreen"
+
+# Create Manhattan plot with Bonferroni line and legend
+pdf(file = "Pft1e3_manplot_with_bonf_ind_seg.pdf", family = "sans", height = 27.8, width = 50, pointsize = 20, bg = "white")
+par(mfrow = c(1, 1), family = "sans", cex = 1.5, font = 2)
+plot(y, x, xaxt = "n", main = "Manhattan Plot SNP p_value - Trait: 1 Effect: 3", xlab = "", ylab = "-log10(p-value)", pch = 20, xlim = c(1, n), ylim = c(0, max(x)), col = chr)
+
+# Add Bonferroni line
+abline(h = bonf, col = "red", lwd = 2, lty = 2)
+
+# Add legend for Bonferroni line
+legend("topright", legend = "Bonferroni correction for genome independent segments", col = "red", lwd = 2, lty = 2, cex = 1)
+
+axis(1, at = pos, labels = chrn)
+dev.off()
+
+```
+
+<img src="image129.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+To build a Manhattan Plot using the **plain Bonferroni** we need to recalculate the object bonf.
+
+```{r eval=FALSE}
+# Calculate Bonferroni threshold (already done)
+nsnps <- nrow(yyy)
+bonf <- -log10(0.05 / nsnps)
+
+# Create Manhattan plot with Bonferroni line and legend
+pdf(file = "Pft1e3_manplot_with_plain_bonf.pdf", family = "sans", height = 27.8, width = 50, pointsize = 20, bg = "white")
+par(mfrow = c(1, 1), family = "sans", cex = 1.5, font = 2)
+plot(y, x, xaxt = "n", main = "Manhattan Plot SNP p_value - Trait: 1 Effect: 3", xlab = "", ylab = "-log10(p-value)", pch = 20, xlim = c(1, n), ylim = c(0, max(x)), col = chr)
+
+# Add Bonferroni line
+abline(h = bonf, col = "red", lwd = 2, lty = 2)
+
+# Add legend for Bonferroni line
+legend("topright", legend = "Bonferroni correction for genome independent segments", col = "red", lwd = 2, lty = 2, cex = 1)
+
+axis(1, at = pos, labels = chrn)
+dev.off()
+
+```
+
+<img src="image130.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Finally, to correct for multiple testing using FDR
+
+```{r eval=FALSE}
+
+
+yyy1$bh <- p.adjust(yyy1$p_value, method = "BH")
+
+yyy1$p_value <- 10^(-yyy1$V3)
+
+yyy1$bh <- p.adjust(yyy1$p_value, method = "BH")
+
+SNP_sig_BH <- filter(yyy1, bh < 0.05)
+
+write.table(SNP_sig_BH, file = "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/SNP_sig_BH.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+colnames(yyy1) <- c("V1", "V2", "logP", "V4", "Chr", "bp", "p", "bh")
+
+gwas <- yyy1
+
+# Prepare the dataset
+don <- gwas %>% 
+  group_by(Chr) %>% 
+  summarise(chr_len = max(bp)) %>% 
+  mutate(tot = cumsum(as.numeric(chr_len)) - as.numeric(chr_len)) %>%
+  select(-chr_len) %>%
+  left_join(gwas, ., by = c("Chr" = "Chr")) %>%
+  arrange(Chr, bp) %>%
+  mutate(BPcum = as.numeric(bp) + tot) %>%
+  mutate(is_highlight = ifelse(bh < 0.05, "yes", "no")) %>%
+  mutate(is_annotate = ifelse(bh < 0.05, "yes", "no"))
+
+# Remove rows with missing BPcum values
+don <- don %>% filter(!is.na(BPcum))
+
+# Prepare X axis
+axisdf <- don %>% 
+  group_by(Chr) %>% 
+  summarize(center = (max(BPcum) + min(BPcum)) / 2)
+
+# Find the maximum logP value for setting y-axis limits
+max_logP <- max(don$logP, na.rm = TRUE)
+
+# Make the plot
+ggplot(don, aes(x = BPcum, y = logP)) +
+  geom_point(aes(color = as.factor(Chr)), alpha = 0.8, size = 1.3) +
+  scale_color_manual(values = rep(c("grey", "skyblue"), 22)) +
+  scale_x_continuous(label = axisdf$Chr, breaks = axisdf$center) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, max_logP + 1)) + # Set y-axis limit
+  geom_point(data = subset(don, is_highlight == "yes"), color = "orange", size = 2) +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) +
+  labs(title = "GWAS Cortisol", x = "Chromosomes", y = "-log10(p)")
+
+
+```
+
+<img src="image131.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 ### Results
 
