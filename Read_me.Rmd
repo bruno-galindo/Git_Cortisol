@@ -2778,6 +2778,69 @@ dev.off()
 
 <img src="image129.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+For additional analysis like Variant Effect Prediction (VEP) we need the rsID, to get the rsID we use the software SNPChimp which requires SNP_names, but the BLUPF90 output have only the Chromosome and Position of the SNPs, so we are going to perfome these two steps to get one file with t he significant SNPs + SNP_name + rsID
+
+###### Step 01 = Bring the SNP name to GWAS output
+
+For this analysis we have to build this new sheet bringing SNP ID from snpmap.txt
+```{r eval=FALSE}
+gwas = read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/chrsnp_pval")
+colnames(gwas) <- c("V1", "V2", "LOG_P", "SNP", "CHR", "BP")
+gwas <- filter(gwas, LOG_P >= bonf)
+
+snpmap <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/snpmap.txt", header = T)
+
+# Filter snpmap to only include rows that match the CHR and BP values in out_genes
+filtered_snpmap <- snpmap[snpmap$CHR %in% gwas$CHR & snpmap$POS %in% gwas$BP, ]
+
+# Merge the filtered snpmap with out_genes
+gwas_snpname <- merge(gwas, filtered_snpmap[, c("CHR", "POS", "SNP_ID")], 
+                   by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), 
+                   all.x = TRUE)
+
+gwas_snpname <- gwas_snpname[,c("CHR", "BP", "LOG_P", "SNP_ID")]
+
+write.csv(gwas_snpname, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
+```
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+###### Step 02 = Bring the rsID  to the file with SNP name.
+After get the **rsID** from SNPCHIMP I produced this table with the code bellow:
+
+```{r eval=FALSE}
+rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/SNPchimp_result_1723415732_BLUPF90GWAS.tsv", header = T)
+
+merged <- merge(rsid, gwas_snpname, by.x ="SNP_name", by.y ="SNP_ID")
+
+colnames(merged)
+
+merged <- merged[,c("SNP_name", "rs", "CHR", "BP", "LOG_P")]
+
+colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "LOG_P")
+
+write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/gwas_ind_seg_sig_SNPname_rsID.csv")
+
+```
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gwas_ind_seg_sig_SNPname_rsID.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
 ##### Plain Bonferroni
 To build a Manhattan Plot using the **plain Bonferroni** we need to recalculate the object bonf.
 
@@ -2978,6 +3041,66 @@ plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1.5)
 
 <img src="image134.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+**Production QTLs**
+```{r eval=FALSE}
+#Setting margin parameter to better fit the axis labels
+oldpar<-par(mar=c(5,20,1,1))
+#plotting the percentage of each trait annoatted as a Reproduction QTL
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Production")
+```
+
+<img src="image135.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Reproduction QTLs**
+```{r eval=FALSE}
+#Setting margin parameter to better fit the axis labels
+oldpar<-par(mar=c(5,20,1,1))
+#plotting the percentage of each trait annoatted as a Reproduction QTL
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Reproduction")
+```
+
+<img src="image136.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Milk QTLs**
+```{r eval=FALSE}
+#Setting margin parameter to better fit the axis labels
+oldpar<-par(mar=c(5,20,1,1))
+#plotting the percentage of each trait annoatted as a Reproduction QTL
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Milk")
+```
+
+<img src="image137.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Meat and Carcass QTLs**
+```{r eval=FALSE}
+#Setting margin parameter to better fit the axis labels
+oldpar<-par(mar=c(5,20,1,1))
+#plotting the percentage of each trait annoatted as a Reproduction QTL
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class=""Meat_and_Carcass"")
+```
+
+<img src="image138.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Health QTLs**
+```{r eval=FALSE}
+#Setting margin parameter to better fit the axis labels
+oldpar<-par(mar=c(5,20,1,1))
+#plotting the percentage of each trait annoatted as a Reproduction QTL
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
+```
+
+<img src="image139.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**Exterior QTLs**
+```{r eval=FALSE}
+#Setting margin parameter to better fit the axis labels
+oldpar<-par(mar=c(5,20,1,1))
+#plotting the percentage of each trait annoatted as a Reproduction QTL
+plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Exterior")
+```
+
+<img src="image140.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
 ### QTL enrichment on GALLO
 
 ```{r eval=FALSE}
@@ -3059,8 +3182,18 @@ knitr::kable(data)
 <img src="image133.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
 
+## BLUPF90+ GPROFILER ON-LINE
 
+From the online version of GPROFILER i got the following results.
 
+**Legend**
+<img src="image41.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image141.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image142.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+## BLUPF90+ GWAS OUTPUT with SNP ID
 
 ### Results
 
