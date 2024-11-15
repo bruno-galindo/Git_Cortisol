@@ -3193,7 +3193,124 @@ From the online version of GPROFILER i got the following results.
 
 <img src="image142.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-## BLUPF90+ GWAS OUTPUT with SNP ID
+## BLUPF90+ VEP
+
+<img src="image143.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110079750
+<img src="image144.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs109276211
+<img src="image145.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs109631116
+<img src="image146.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs42029843
+<img src="image147.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110428837
+<img src="image148.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110081798
+<img src="image149.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110160157
+<img src="image150.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110038841
+<img src="image151.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs109868537
+<img src="image152.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110565206
+<img src="image153.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs42751504
+<img src="image154.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110121846
+<img src="image155.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110935391
+<img src="image156.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs109584097
+<img src="image157.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs41585925
+<img src="image158.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs110506037
+<img src="image159.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs109273103
+<img src="image160.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs109575643
+<img src="image161.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs43305418
+<img src="image162.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs43377276
+<img src="image163.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs43691687
+<img src="image164.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs41764450
+<img src="image165.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs42305073
+No
+
+rs42462935
+No
+
+rs42752353
+<img src="image166.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs81154019
+No
+
+rs41645754
+<img src="image167.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs41566051
+<img src="image168.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs41636137
+<img src="image169.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs41615935
+<img src="image170.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29026778
+<img src="image171.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29013980
+<img src="image172.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29023486
+<img src="image173.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29027498
+<img src="image174.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29017061
+<img src="image175.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29018741
+<img src="image176.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29013301
+<img src="image177.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+rs29012492
+<img src="image178.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
 
 ### Results
 
