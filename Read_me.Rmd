@@ -3311,6 +3311,21 @@ rs29013301
 rs29012492
 <img src="image178.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+It is interesting that 3 significant SNPs falled in the same gene CSMD2 on chromosome 3
+rs109868537
+rs42751504
+rs42752353
+
+<img src="image180.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+<img src="image179.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+For the gene CNTNAP2 on chromosome 4 also have 2 significant SNPs
+rs41566051
+rs29012492
+
+<img src="image181.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 ### Results
 
