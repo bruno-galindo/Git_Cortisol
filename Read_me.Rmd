@@ -2104,7 +2104,7 @@ As we got this error message, we needed to solve this problem, and for that we u
 According to the BLUPF90+ tutorial:
 
     ssGWAS is an iterative procedure with 2 steps:
-    0*) Quality control
+    0) Quality control
     1) prediction of GEBV with ssGBLUP
     2) prediction of SNP marker effects based on the GEBV
 
@@ -3326,6 +3326,183 @@ rs41566051
 rs29012492
 
 <img src="image181.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+#### WINDOWS
+#### Running renf90_ssGWAS2_SNPeff_w.par for GWAS (WINDOWS)
+
+I made two differents parameters cards, one for 10 SNPs windows and another for 20 SNPs windows
+The parameter card bellow we are going to run using the software **postGSf90**:
+
+renf90_ssGWAS2_SNPeff_W_10.par
+```{bash eval= FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        22 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   77182.    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   28212.    
+OPTION SNP_file bruno_gntps_iid_71_clean
+OPTION origID
+OPTION no_quality_control
+OPTION readGInverse
+OPTION readA22Inverse
+OPTION map_file snpmap.txt_clean
+OPTION snp_p_value
+OPTION Manhattan_plot_R
+OPTION Manhattan_plot
+OPTION SNP_moving_average 10
+OPTION windows_variance 10 
+
+```
+
+renf90_ssGWAS2_SNPeff_W_20.par
+```{bash eval= FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        22 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   77182.    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   28212.    
+OPTION SNP_file bruno_gntps_iid_71_clean
+OPTION origID
+OPTION no_quality_control
+OPTION readGInverse
+OPTION readA22Inverse
+OPTION map_file snpmap.txt_clean
+OPTION snp_p_value
+OPTION Manhattan_plot_R
+OPTION Manhattan_plot
+OPTION SNP_moving_average 20
+OPTION windows_variance 20 
+
+```
+This code will generate several files, among them:
+<ul>
+<li> **chrsnp_pval**: which has the -log10(pvalue) the 3rd column
+<li> **Pft1e3.R**: a r-code to generate the Manhattan plot in R
+</ul>
+
+
+#### Manhattan Plots for BLUPF90 GWAS
+
+##### Genome Independent Segment
+To make the Manhattan Plot considering Genome Independent Segment we should run the code bellow. This code has part of the code in the file **Pft1e3.R**
+
+```{r eval=FALSE}
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+# Calculate Bonferroni threshold (already done)
+bonf <- -log10(0.05 / Me)
+
+
+setwd("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO")
+# Read in and process data for Manhattan plot
+yyy1 <- read.table("chrsnp_pval")
+yyy <- yyy1[order(yyy1$V4), ]
+zzz <- yyy[which(yyy$V1 == 1 & yyy$V2 == 3), ]
+n <- nrow(zzz)
+y <- zzz[, 4]
+x <- zzz[, 3]
+chr1 <- zzz[, 5]
+chr <- NULL
+pos <- NULL
+
+for (i in unique(yyy$V5)) {
+  zz <- yyy[yyy$V5 == i, ]
+  key <- zz$V4
+  medio <- round(nrow(zz) / 2, 0)
+  z <- key[medio]
+  pos <- c(pos, z)
+}
+
+chrn <- unique(yyy$V5)
+one <- which(chr1 %% 4 == 0)
+two <- which(chr1 %% 4 == 1)
+three <- which(chr1 %% 4 == 2)
+four <- which(chr1 %% 4 == 3)
+chr[one] <- "darkgoldenrod"
+chr[two] <- "darkorchid"
+chr[three] <- "blue"
+chr[four] <- "forestgreen"
+
+# Create Manhattan plot with Bonferroni line and legend
+pdf(file = "Pft1e3_manplot_with_bonf_ind_seg.pdf", family = "sans", height = 27.8, width = 50, pointsize = 20, bg = "white")
+par(mfrow = c(1, 1), family = "sans", cex = 1.5, font = 2)
+plot(y, x, xaxt = "n", main = "Manhattan Plot SNP p_value - Trait: 1 Effect: 3", xlab = "", ylab = "-log10(p-value)", pch = 20, xlim = c(1, n), ylim = c(0, max(x)), col = chr)
+
+# Add Bonferroni line
+abline(h = bonf, col = "red", lwd = 2, lty = 2)
+
+# Add legend for Bonferroni line
+legend("topright", legend = "Bonferroni correction for genome independent segments", col = "red", lwd = 2, lty = 2, cex = 1)
+
+axis(1, at = pos, labels = chrn)
+dev.off()
+
+```
+
+<img src="image129.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+For additional analysis like Variant Effect Prediction (VEP) we need the rsID, to get the rsID we use the software SNPChimp which requires SNP_names, but the BLUPF90 output have only the Chromosome and Position of the SNPs, so we are going to perfome these two steps to get one file with t he significant SNPs + SNP_name + rsID
+
 
 ### Results
 
@@ -5121,3 +5298,13 @@ From the online version of GPROFILER i got the following results.
 <img src="image123.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 <img src="image124.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+$$
+H_3 = \begin{pmatrix}
+14 & 15 \\
+16 & 17 \\
+18 & 19 \\
+20 & 21
+\end{pmatrix}
+$$
+
