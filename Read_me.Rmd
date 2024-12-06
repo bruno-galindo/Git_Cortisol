@@ -2101,6 +2101,18 @@ As we got this error message, we needed to solve this problem, and for that we u
 
 ## BLUPF90+ GWAS
 
+To run ssGWAS on Blupf90+ suite, we will need 4 different softwares:
+
+<ul>
+<li> **renum**: just to renumerate the files and generate the renf90.par
+<li> **preGSF90**: just to perfome a quality control with different parameter from the default.
+<li> **blupf90+**: used to estimate VCE and generate Ainv and Ginv
+<li> **postGSF90**: perform GWAS
+</ul>
+
+The tutorial for preGSF90 and postGSF90 we can find in the link bellow
+<https://nce.ads.uga.edu/wiki/doku.php?id=readme.pregsf90#gwas_options_postgsf90>
+
 According to the BLUPF90+ tutorial:
 
     ssGWAS is an iterative procedure with 2 steps:
@@ -2693,8 +2705,16 @@ OPTION Manhattan_plot
 
 This code will generate several files, among them:
 <ul>
-<li> **chrsnp_pval**: which has the -log10(pvalue) the 3rd column
-<li> **Pft1e3.R**: a r-code to generate the Manhattan plot in R
+<li> **chrsnp_pval**: 
+<ul>
+<li> Column 1: trait
+<li> Column 2: effect
+<li> Column 3: -log10(p-value)
+<li> Column 4: SNP
+<li> Column 5: Chromosome
+<li> Column 6: Position in bp
+</ul>
+<li> **Pft1e3.R**: a r-code to generate the Manhattan plot in R using the chrsnp_pval
 </ul>
 
 
@@ -3330,7 +3350,6 @@ rs29012492
 #### WINDOWS
 #### Running renf90_ssGWAS2_SNPeff_w.par for GWAS (WINDOWS)
 
-I made two differents parameters cards, one for 10 SNPs windows and another for 20 SNPs windows
 The parameter card bellow we are going to run using the software **postGSf90**:
 
 renf90_ssGWAS2_SNPeff_W_10.par
@@ -3374,46 +3393,7 @@ OPTION windows_variance 10
 
 ```
 
-renf90_ssGWAS2_SNPeff_W_20.par
-```{bash eval= FALSE}
-# BLUPF90 parameter file created by RENUMF90
-DATAFILE
-renf90.dat
-NUMBER_OF_TRAITS
-           1
-NUMBER_OF_EFFECTS
-           3
-OBSERVATION(S)
-    1
-WEIGHT(S)
- 
-EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
- 2         4 cross 
- 3        22 cross 
- 4      3724 cross 
-RANDOM_RESIDUAL VALUES
-   77182.    
- RANDOM_GROUP
-     3
- RANDOM_TYPE
- add_an_upginb
- FILE
-renadd03.ped                                                                    
-(CO)VARIANCES
-   28212.    
-OPTION SNP_file bruno_gntps_iid_71_clean
-OPTION origID
-OPTION no_quality_control
-OPTION readGInverse
-OPTION readA22Inverse
-OPTION map_file snpmap.txt_clean
-OPTION snp_p_value
-OPTION Manhattan_plot_R
-OPTION Manhattan_plot
-OPTION SNP_moving_average 20
-OPTION windows_variance 20 
 
-```
 This code will generate several files, among them:
 <ul>
 <li> **chrsnp_pval**: which has the -log10(pvalue) the 3rd column
