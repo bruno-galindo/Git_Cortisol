@@ -667,10 +667,17 @@ The file should be saved as text file, with separation by space and no columns n
 We  used the code below to replace the cid for iid. First we merge using the second column of the firs file, and the first column of the second file. Then we use again the command awk to keep only the third and fifth columsn and sabe in a different object.
 
 
+
 ```{bash eval=FALSE}
 # Using the awk function to merge the two files and the second awk to select only the 3rd and 5fh columns
 awk 'FNR==NR {a[$2]=$0; next} {print a[$1], $0}' bruno_ids.csv bruno_gntps.txt | awk '{print$3,$5}' > bruno_gntps_iid
 ```
+
+Below we can find the file's location from the code above:
+/home/bambrozi/2_CORTISOL/RawFiles/Genotypes/bruno_gntps.txt
+/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/bruno_gntps_iid
+
 
 ### Download the executable files
 
@@ -1312,7 +1319,7 @@ knitr::kable(data)
 
 ```
 
-#### BLUPF90+ GALLO
+### BLUPF90+ GALLO
 
 ```{r eval=FALSE}
 Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
@@ -1481,7 +1488,7 @@ plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Exterior")
 
 <img src="image140.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-##### QTL enrichment on GALLO
+#### QTL enrichment on GALLO
 
 ```{r eval=FALSE}
 #QTL enrichment analysis 
@@ -1827,7 +1834,7 @@ The parameter file above will generate the following files:
 
 
 
-## Windows - BLUPF90+ GALLO
+### Windows - BLUPF90+ GALLO
 
 ```{r eval=FALSE}
 w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
@@ -1978,7 +1985,7 @@ plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Exterior")
 
 <img src="image188.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-### Windows - QTL enrichment on GALLO
+#### Windows - QTL enrichment on GALLO
 
 ```{r eval=FALSE}
 #QTL enrichment analysis 
@@ -2104,8 +2111,6 @@ knitr::kable(data)
 
 These 3 SNPs explain together **3,22%** of Variance and all of them fall in the gene **CSMD2**
 
-
-
 I checked if the genes found surrounding SNPs in "Regular Blup" and "Windows Blup" were the same.
 
 ```{r eval=FALSE}
@@ -2119,7 +2124,86 @@ write.csv(common_genes, "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/
 And the unique common gene surrounding the SNPs in both analysis were also **CSMD2**
 
 
-Next we need to check the allele frequency of this SNP (STOP 2024-12-09)
+## Allele frequency for GWAS output
+
+I created the code bellow to find out the allele frequency for those most significant SNPs considering the two different methodologies, the "regular"ssGWAS and the window ssGWAS.
+
+```{r eval=FALSE}
+
+# Bringing SNP_ID to SNP_Frequency
+snpmap <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header=T)
+snpfreq <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/freqdata.count")
+map_freq <- merge(snpmap, snpfreq, by.x = "CHR", by.y = "V1")
+colnames(map_freq) <- c("CHR", "POS", "SNP_ID", "FREQ")
+write.csv(map_freq, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/allele_freq.csv")
+
+
+# Output for Variance explained by Window
+snpWvar <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
+snpWvar <- filter(snpWvar, V3 > 0.5)
+colnames(snpWvar) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
+merged_data <- merge(snpWvar, snpmap, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
+snpWvar <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
+var_freq <- merge(snpWvar, map_freq, by.x = "SNP_ID", by.y="SNP_ID") 
+write.csv(var_freq, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w_allele_freq.csv")
+
+# Output for significant p-value
+
+#Estimating Bonferroni for genome independent segments
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+NeL <- Ne*L_M
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+# Calculate Bonferroni threshold (already done)
+bonf <- -log10(0.05 / Me)
+
+#import MARKER files = the GWAS output
+snpPval = read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/chrsnp_pval")
+colnames(snpPval) <- c("V1", "V2", "LOG_P", "SNP", "CHR", "BP")
+snpPval <- filter(snpPval, LOG_P >= bonf)
+snpPval <- snpPval[,c("LOG_P", "SNP", "CHR", "BP")]
+merged_data2 <- merge(snpPval, snpmap, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
+snpPval <- merged_data2[,c("CHR", "BP", "LOG_P", "SNP_ID")]
+pval_freq <- merge(snpPval, map_freq, by.x = "SNP_ID", by.y="SNP_ID") 
+write.csv(pval_freq, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/pval_allele_freq.csv")
+
+```
+
+### "Regular" ssGWAS
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/pval_allele_freq.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+### Windows ssGWAS
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w_allele_freq.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
 
 # Genetic Correlation
 
