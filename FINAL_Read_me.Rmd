@@ -1254,6 +1254,7 @@ dev.off()
 
 <img src="image129.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+
 #### Get rsID
 
 For additional analysis like Variant Effect Prediction (VEP) we need the rsID, to get the rsID we use the software SNPChimp which requires SNP_names, but the BLUPF90 output have only the Chromosome and Position of the SNPs, so we are going to perfome these two steps to get one file with t he significant SNPs + SNP_name + rsID
@@ -1832,7 +1833,85 @@ The parameter file above will generate the following files:
 <li> **Pft1e3.R**
 </ul>
 
+Bellow we can see the SNPs that explain more than **0.5%** of Genetic Variance 
 
+```{r eval=FALSE}
+w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
+w_var <- filter(w_var, V3 > 0.5)
+colnames(w_var) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
+snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header = T)
+
+# Fazer o merge baseado em duas condições: CHR e POS
+merged_data <- merge(w_var, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
+w_var <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
+
+
+rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/SNPchimp_result_3859303481.tsv", header = T)
+
+
+merged <- merge(rsid, w_var, by.x ="SNP_name", by.y ="SNP_ID")
+
+colnames(merged)
+
+merged <- merged[,c("SNP_name", "rs", "CHR", "BP", "Var")]
+
+colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "Var")
+
+write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_05.csv")
+```
+
+Bellow we can see the SNPs that explain more than 0.5% of Genetic Variance
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w10_snp_rsid_snpvar_05.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+Bellow we can see the SNPs that explain more than **0.3%** of Genetic Variance 
+
+```{r eval=FALSE}
+w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
+w_var <- filter(w_var, V3 > 0.3)
+colnames(w_var) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
+snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header = T)
+
+# Fazer o merge baseado em duas condições: CHR e POS
+merged_data <- merge(w_var, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
+w_var <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
+
+# We do this to copy the names of SNPs and paste in SNPCHIMP website to get the .tsv file bellow
+snp_ids <- paste(w_var$SNP_ID, collapse = ", ")
+snp_ids
+rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/SNPchimp_result_1536968083.tsv", header = T)
+
+
+merged <- merge(rsid, w_var, by.x ="SNP_name", by.y ="SNP_ID")
+
+colnames(merged)
+
+merged <- merged[,c("SNP_name", "rs", "CHR", "BP", "Var")]
+
+colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "Var")
+
+write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_03.csv")
+```
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w10_snp_rsid_snpvar_03.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+STOP STOP 23 DECEMBER 2024
 
 ### Windows - BLUPF90+ GALLO
 
