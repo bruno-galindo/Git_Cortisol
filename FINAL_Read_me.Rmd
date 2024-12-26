@@ -1323,32 +1323,6 @@ knitr::kable(data)
 ### BLUPF90+ GALLO
 
 ```{r eval=FALSE}
-Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
-
-library(dplyr)
-# Filter the rows and sum the Seq length column
-# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
-L <- Genome_Assembly_ARS_UCD_1_2 %>%
-  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
-  summarise(total_length = sum(`Seq length`)) %>%
-  pull(total_length)
-
-# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
-L_M <- L/10^8
-
-# The Ne measure is based on the article bellow:
-Ne <- 66 #(Makanjoula et al., 2020)
-
-NeL <- Ne*L_M
-
-# This is the number of independent segment in the genome.
-Me <- (2*NeL)/log10(NeL)
-
-
-# Calculate Bonferroni threshold (already done)
-bonf <- -log10(0.05 / Me)
-
-
 # GALLO
 
 #import a QTL annotation file
@@ -1358,9 +1332,8 @@ qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTL
 gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
 
 #import MARKER files = the GWAS output
-gwas = read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/chrsnp_pval")
-colnames(gwas) <- c("V1", "V2", "LOG_P", "SNP", "CHR", "BP")
-gwas <- filter(gwas, LOG_P >= bonf)
+gwas = read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/gwas_ind_seg_sig_SNPname_rsID.csv")
+colnames(gwas) <- c("X", "SNP", "rsID", "CHR", "BP", "LOG_P")
 
 
 #FINDING GENES AND QTLs ARROUND THE MARKER
@@ -1373,10 +1346,7 @@ out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2,
                                             interval = 50000, 
                                             nThreads = NULL)
 
-write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_genes_50k.txt", 
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
-
-write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_genes_50k.csv")
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_genes_50k_pvalue.csv")
 
 #FINDING QTLs
 
@@ -1388,12 +1358,12 @@ out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2,
                                           nThreads = NULL)
 
 
-write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_qtl_50k.txt", 
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_qtl_50k_pvalue.txt", 
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
 
 library(tidyverse)
-out.qtl.clean <- select(out.qtl, c("CHR", "SNP", "BP", "QTL_type", "start_pos", "end_pos","QTL_ID"))
-write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_qtl_50k_clean.csv")
+out.qtl.clean <- select(out.qtl, c("SNP", "rsID", "CHR", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_qtl_50k_pvalue_clean.csv")
 
 ```
 
@@ -1403,7 +1373,7 @@ The GALLO output are bellow:
 **For GENES**
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_50k_BlupGWAS.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_50k_pvalue.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -1413,7 +1383,7 @@ knitr::kable(data)
 **FOR QTLs**
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_50k_clean_BlupGWAS.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_50k_pvalue_clean.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -1421,73 +1391,11 @@ knitr::kable(data)
 ```
 
 **QTL type**
-```{r eval=FALSE}
-#plotting the percentage of each QTL class annoatted
-oldpar <- par(mar=c(1,15,0.5,1))
-plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1.5)
-```
-
 <img src="image134.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-**Production QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Production")
-```
+**QTL name by type**
+<img src="image197.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-<img src="image135.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Reproduction QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Reproduction")
-```
-
-<img src="image136.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Milk QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Milk")
-```
-
-<img src="image137.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Meat and Carcass QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class=""Meat_and_Carcass"")
-```
-
-<img src="image138.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Health QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
-```
-
-<img src="image139.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Exterior QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Exterior")
-```
-
-<img src="image140.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 #### QTL enrichment on GALLO
 
@@ -1548,7 +1456,7 @@ QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
 **Enrichment by name** (enrichment analysis will be performed for each trait individually)
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_BLUP_GWAS.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_pvalue.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -1560,7 +1468,7 @@ knitr::kable(data)
 **Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_BLUP_GWAS.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_pvalue.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -1860,8 +1768,6 @@ colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "Var")
 write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_05.csv")
 ```
 
-Bellow we can see the SNPs that explain more than 0.5% of Genetic Variance
-
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
 data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w10_snp_rsid_snpvar_05.csv")
@@ -1872,59 +1778,141 @@ knitr::kable(data)
 ```
 
 
-Bellow we can see the SNPs that explain more than **0.3%** of Genetic Variance 
+Bellow we can see the SNPs that explain more than **0.1%** of Genetic Variance 
 
 ```{r eval=FALSE}
 w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
-w_var <- filter(w_var, V3 > 0.3)
+w_var <- filter(w_var, V3 > 0.1)
 colnames(w_var) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
 snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header = T)
 
 # Fazer o merge baseado em duas condições: CHR e POS
 merged_data <- merge(w_var, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
-w_var <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
-
-# We do this to copy the names of SNPs and paste in SNPCHIMP website to get the .tsv file bellow
-snp_ids <- paste(w_var$SNP_ID, collapse = ", ")
-snp_ids
-rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/SNPchimp_result_1536968083.tsv", header = T)
+w_var <- merged_data[,c("CHR", "BP", "SNP_ID", "Var")]
 
 
-merged <- merge(rsid, w_var, by.x ="SNP_name", by.y ="SNP_ID")
-
-colnames(merged)
-
-merged <- merged[,c("SNP_name", "rs", "CHR", "BP", "Var")]
-
-colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "Var")
-
-write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_03.csv")
+write.csv(w_var, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_01.csv")
 ```
 
-
+ps: we don't have rsID for the SNPs which explain more than 0.1% because there are 1,089 different SNPs and SNPchimp can't deal with this ammount of data.
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w10_snp_rsid_snpvar_03.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w10_snp_rsid_snpvar_01.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
 
 ```
 
-STOP STOP 23 DECEMBER 2024
-
-### Windows - BLUPF90+ GALLO
+#### Manhattan Plots for BLUPF90 Windows ssGWAS
 
 ```{r eval=FALSE}
-w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
-w_var <- filter(w_var, V3 > 0.5)
-colnames(w_var) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
+# Set working directory
+setwd("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10")
+getwd()
 
-snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header = T)
+# Read and process data
+yyy1 = read.table("chrsnpvar")
+yyy  = yyy1[order(yyy1$V4),]
+zzz  = yyy[ which(yyy$V1==1 & yyy$V2==3), ]
+n    = nrow(zzz)
+y    = zzz[,4]
+x    = zzz[,3]
+chr1 = zzz[,5]
+chr  = NULL
+pos  = NULL
+for (i in unique(yyy$V5)) {
+  zz     = yyy[yyy$V5==i,]
+  key    = zz$V4 
+  medio  = round(nrow(zz)/2,0)
+  z      = key[medio]
+  pos    = c(pos,z)
+}
 
-# Fazer o merge baseado em duas condições: CHR e POS
-merged_data <- merge(w_var, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
-w_var <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
+# Assign colors for chromosomes
+chrn       = unique(yyy$V5)
+one        = which(chr1%%4==0) 
+two        = which(chr1%%4==1) 
+three      = which(chr1%%4==2) 
+four       = which(chr1%%4==3) 
+chr[one]   = "darkgoldenrod"
+chr[two]   = "darkorchid"
+chr[three] = "blue"
+chr[four]  = "forestgreen"
+
+# Generate Manhattan plot and save to PNG
+png(file = "Vft1e3_manplot_with_thresholds.png", 
+    width = 20000, height = 10000, res = 600) # Configure width, height, and resolution
+
+# Set plot parameters
+par(mfrow = c(1, 1), family = "sans", cex = 1.5, font = 2, mar = c(5, 5, 4, 2))
+
+# Create Manhattan plot
+plot(y, x, xaxt = "n", main = "Manhattan Plot SNP Variance explained by 10 adjacents SNP window", 
+     xlab = "", ylab = "% variance expl", pch = 20, 
+     xlim = c(1, n), ylim = c(0, max(x)), col = chr, cex.axis = 1.2)
+
+# Add dashed lines for thresholds
+abline(h = 0.1, col = "blue", lwd = 2, lty = 2) # Blue dashed line at 0.3
+abline(h = 0.5, col = "red", lwd = 2, lty = 2)  # Red dashed line at 0.5
+
+# Add legend for thresholds
+legend("topright", legend = c("Threshold 0.1", "Threshold 0.5"), 
+       col = c("blue", "red"), lwd = 2, lty = 2, cex = 1)
+
+# Add chromosome labels on the X-axis
+axis(1, at = pos, labels = chrn, las = 1, cex.axis = 0.8)
+
+# Close the graphics device
+dev.off()
+
+```
+
+<img src="image191.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+## Comparison among ssGWAS for independent SNPs against Window 0.5% and window 0.1%
+
+```{r eval=FALSE}
+w05 <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_05.csv")
+
+w01 <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_01.csv")
+  
+pvalue <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/gwas_ind_seg_sig_SNPname_rsID.csv")
+
+common_SNP_05 <- intersect(pvalue$SNP_name, w05$SNP_name)
+
+common_SNP_01 <- intersect(pvalue$SNP_name, w01$SNP_ID)
+
+common_SNP_01
+common_SNP_05
+
+# Assuming common_SNP_05 is your original object
+common_SNP_05 <- c(common_SNP_05[1], common_SNP_05[2], NA, NA, common_SNP_05[3])
+
+
+comparison <- cbind(common_SNP_01, common_SNP_05)
+
+write.csv(comparison, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/comparison_snp_01_05_pvalue.csv")
+```
+
+Bellow are the SNPs which had the p-value bellow bonferroni and also apeeared in the set of SNPs which explain more thant 0.5% or 0.1% of genetic variance.
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/comparison_snp_01_05_pvalue.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+### 0.5% Windows - BLUPF90+ GALLO
+
+```{r eval=FALSE}
+gwas <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_05.csv")
+colnames(gwas)
+colnames(gwas) <- c("X", "SNP", "rsID", "CHR", "BP", "Var")
 
 
 # GALLO
@@ -1934,10 +1922,6 @@ qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTL
 
 #import a gene annotation file
 gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
-
-#import MARKER files = the GWAS output
-gwas <- w_var
-colnames(gwas) <- c("CHR", "BP", "Var", "SNP")
 
 #FINDING GENES AND QTLs ARROUND THE MARKER
 
@@ -1949,10 +1933,7 @@ out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2,
                                             interval = 50000, 
                                             nThreads = NULL)
 
-write.table(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w.txt", 
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
-
-write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w.csv")
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w05.csv")
 
 #FINDING QTLs
 
@@ -1964,12 +1945,13 @@ out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2,
                                           nThreads = NULL)
 
 
-write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w.txt", 
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w_05.txt", 
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
 
 library(tidyverse)
-out.qtl.clean <- select(out.qtl, c("CHR", "SNP", "BP", "QTL_type", "start_pos", "end_pos","QTL_ID"))
-write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w_clean.csv")
+out.qtl.clean <- select(out.qtl, c("SNP", "rsID", "CHR", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w_05_clean.csv")
+
 ```
 
 The GALLO output are bellow:
@@ -1977,7 +1959,7 @@ The GALLO output are bellow:
 **For GENES**
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_w.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_genes_w_05.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -1987,87 +1969,42 @@ knitr::kable(data)
 **FOR QTLs**
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_w_clean.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_w_05_clean.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
 
 ```
 
+**QTL Plots**
 
-**QTL type**
 ```{r eval=FALSE}
-#plotting the percentage of each QTL class annoatted
-oldpar <- par(mar=c(1,5,0.5,1))
+# Set working directory
+setwd("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10")
+
+#QTL type plot
+oldpar <- par(mar=c(1,15,0.5,1))
 plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1.5)
-```
 
-<img src="image182.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+#QTL names plot (by type)
 
-**Production QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Production")
-```
+# Set the width and height in pixels for 600 DPI
+png("qtl_names_w05.png", width=5100, height=6600, res=600)  # Width and height in pixels
+# Set layout for multiple plots
+par(mfrow=c(6, 1), mar=c(2, 20, 1, 1))
+# List of QTL classes for titles
+qtl_classes <- c("Production", "Reproduction", "Milk", "Meat_and_Carcass", "Health", "Exterior")
+# Loop through each QTL class and plot
+for (qtl_class in qtl_classes) {
+  plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class=qtl_class)
+  title(main=qtl_class)  # Add the QTL class as the main title for each plot
+}
+# Close the device
+dev.off()
 
-<img src="image183.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-**Reproduction QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Reproduction")
-```
-
-<img src="image184.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Milk QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Milk")
-```
-
-<img src="image185.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Meat and Carcass QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Meat_and_Carcass")
-```
-
-<img src="image186.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Health QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Health")
-```
-
-<img src="image187.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-**Exterior QTLs**
-```{r eval=FALSE}
-#Setting margin parameter to better fit the axis labels
-oldpar<-par(mar=c(5,20,1,1))
-#plotting the percentage of each trait annoatted as a Reproduction QTL
-plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class="Exterior")
-```
-
-<img src="image188.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-#### Windows - QTL enrichment on GALLO
-
-```{r eval=FALSE}
 #QTL enrichment analysis 
+
 out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2, 
                                  qtl_file= out.qtl, qtl_type = "Name",
                                  enrich_type = "genome", chr.subset = NULL, 
@@ -2076,8 +2013,8 @@ out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2,
 
 # Sorting the dataframe in ascending order of adj.pval
 sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_name_w05.csv")
 
-write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_name_w.csv")
 
 out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
                                  qtl_file= out.qtl, qtl_type = "QTL_type",
@@ -2085,46 +2022,46 @@ out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2,
                                  padj = "fdr",nThreads = 2)
 
 sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
-write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_type_w.csv")
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_type_w05.csv")
 
 
 #Plots
 
 #Name
-
 #Creating a new ID composed by the trait and the chromosome
-out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL," - ","CHR",out.enrich_qtl_name$CHR,sep="")
-
+out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL, out.enrich_qtl_name$CHR,sep="")
 #Match the QTL classes and filtering the Reproduction related QTLs
 out.enrich.filtered<-out.enrich_qtl_name[which(out.enrich_qtl_name$adj.pval<0.05),]
-
 #Plotting the enrichment results for the QTL enrichment analysis
 dev.off()
 QTLenrich_plot(out.enrich.filtered, x="ID", pval="adj.pval")
 
 
 #Type
-
 #Creating a new ID composed by the trait and the chromosome
-out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL," - ","CHR",out.enrich_qtl_type$CHR,sep="")
-
+out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL, out.enrich_qtl_type$CHR,sep="")
 #Match the QTL classes and filtering the Reproduction related QTLs
 out.enrich.filtered_type<-out.enrich_qtl_type[which(out.enrich_qtl_type$adj.pval<0.05),]
-
 #Plotting the enrichment results for the QTL enrichment analysis
 dev.off()
 QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
-
-
 ```
 
+
+**QTL type**
+<img src="image182.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**QTL name by type**
+<img src="image192.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+#### Windows - QTL enrichment on GALLO
 
 **QTL Enrichment outcomes**
 
 **Enrichment by name** (enrichment analysis will be performed for each trait individually)
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_w.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_w05.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -2136,7 +2073,7 @@ knitr::kable(data)
 **Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_w.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_w05.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -2146,6 +2083,172 @@ knitr::kable(data)
 <img src="image190.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
 
+### 0.1% Windows - BLUPF90+ GALLO
+
+```{r eval=FALSE}
+gwas <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_01.csv")
+
+colnames(gwas)
+colnames(gwas) <- c("X", "CHR", "BP", "SNP", "Var")
+
+
+# GALLO
+
+#import a QTL annotation file
+qtl_UCD1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Animal_QTLdb_release53_cattleARS_UCD1.gff.gz",file_type="gff")
+
+#import a gene annotation file
+gene_UDC1_2 <- import_gff_gtf(db_file="/home/bambrozi/2_CORTISOL/GALLO/Bos_taurus.ARS-UCD1.2.110.gtf.gz",file_type="gtf")
+
+#FINDING GENES AND QTLs ARROUND THE MARKER
+
+#FINDING GENES
+out.genes <- find_genes_qtls_around_markers(db_file= gene_UDC1_2, 
+                                            marker_file= gwas, 
+                                            method = "gene",
+                                            marker = "snp", 
+                                            interval = 50000, 
+                                            nThreads = NULL)
+
+write.csv(out.genes, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w01.csv")
+
+#FINDING QTLs
+
+out.qtl <- find_genes_qtls_around_markers(db_file= qtl_UCD1_2, 
+                                          marker_file= gwas, 
+                                          method = "qtl",
+                                          marker = "snp", 
+                                          interval = 50000, 
+                                          nThreads = NULL)
+
+
+write.table(out.qtl, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w_01.txt", 
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = T)
+
+library(tidyverse)
+out.qtl.clean <- select(out.qtl, c("SNP", "CHR", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w_01_clean.csv")
+
+table(out.genes$gene_biotype)
+
+
+```
+
+The GALLO output are bellow:
+
+**For GENES**
+Because this file has 1,608 rows we'll not show here, but you can take a look in the file:
+*/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w01.csv*
+
+**FOR QTLs**
+Because this file has 7,347 rows we'll not show here, but you can take a look in the file:
+*/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_qtl_w_01_clean.csv*
+
+**QTL Plots**
+
+```{r eval=FALSE}
+# Set working directory
+setwd("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10")
+
+#QTL type plot
+oldpar <- par(mar=c(1,10,1,1))
+plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1.5)
+
+#QTL names plot (by type)
+
+# Set the width and height in pixels for 600 DPI
+png("qtl_names_w01.png", width=5100, height=6600, res=600)  # Width and height in pixels
+# Set layout for multiple plots
+par(mfrow=c(6, 1), mar=c(2, 20, 1, 1))
+# List of QTL classes for titles
+qtl_classes <- c("Production", "Reproduction", "Milk", "Meat_and_Carcass", "Health", "Exterior")
+# Loop through each QTL class and plot
+for (qtl_class in qtl_classes) {
+  plot_qtl_info(out.qtl, qtl_plot = "qtl_name", qtl_class=qtl_class)
+  title(main=qtl_class)  # Add the QTL class as the main title for each plot
+}
+# Close the device
+dev.off()
+
+
+#QTL enrichment analysis 
+
+out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "Name",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+
+# Sorting the dataframe in ascending order of adj.pval
+sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_name_w01.csv")
+
+
+out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
+                                 qtl_file= out.qtl, qtl_type = "QTL_type",
+                                 enrich_type = "genome", chr.subset = NULL, 
+                                 padj = "fdr",nThreads = 2)
+
+sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_type_w01.csv")
+
+
+#Plots
+
+#Name
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_name$ID<-paste(out.enrich_qtl_name$QTL, out.enrich_qtl_name$CHR,sep="")
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered<-out.enrich_qtl_name[which(out.enrich_qtl_name$adj.pval<0.05),]
+#Plotting the enrichment results for the QTL enrichment analysis
+dev.off()
+QTLenrich_plot(out.enrich.filtered, x="ID", pval="adj.pval")
+
+
+#Type
+#Creating a new ID composed by the trait and the chromosome
+out.enrich_qtl_type$ID<-paste(out.enrich_qtl_type$QTL, out.enrich_qtl_type$CHR,sep="")
+#Match the QTL classes and filtering the Reproduction related QTLs
+out.enrich.filtered_type<-out.enrich_qtl_type[which(out.enrich_qtl_type$adj.pval<0.05),]
+#Plotting the enrichment results for the QTL enrichment analysis
+dev.off()
+QTLenrich_plot(out.enrich.filtered_type, x="ID", pval="adj.pval")
+```
+
+
+**QTL type**
+<img src="image193.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+**QTL name by type**
+<img src="image194.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+#### Windows - QTL enrichment on GALLO
+
+**QTL Enrichment outcomes**
+
+**Enrichment by name** (enrichment analysis will be performed for each trait individually)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_name_w01.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image195.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">  
+
+**Enrichment by QTL_type** (enrichment processes performed for the QTL classes)
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_enrich_qtl_genome_type_w01.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+<img src="image196.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
 
 ## Match Significant p-value and Windows variance bigger than 0.5%
