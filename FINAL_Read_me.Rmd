@@ -1870,41 +1870,6 @@ dev.off()
 
 <img src="image191.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-## Comparison among ssGWAS for independent SNPs against Window 0.5% and window 0.1%
-
-```{r eval=FALSE}
-w05 <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_05.csv")
-
-w01 <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_01.csv")
-  
-pvalue <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/gwas_ind_seg_sig_SNPname_rsID.csv")
-
-common_SNP_05 <- intersect(pvalue$SNP_name, w05$SNP_name)
-
-common_SNP_01 <- intersect(pvalue$SNP_name, w01$SNP_ID)
-
-common_SNP_01
-common_SNP_05
-
-# Assuming common_SNP_05 is your original object
-common_SNP_05 <- c(common_SNP_05[1], common_SNP_05[2], NA, NA, common_SNP_05[3])
-
-
-comparison <- cbind(common_SNP_01, common_SNP_05)
-
-write.csv(comparison, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/comparison_snp_01_05_pvalue.csv")
-```
-
-Bellow are the SNPs which had the p-value bellow bonferroni and also apeeared in the set of SNPs which explain more thant 0.5% or 0.1% of genetic variance.
-
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/comparison_snp_01_05_pvalue.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
 
 
 ### 0.5% Windows - BLUPF90+ GALLO
@@ -2251,59 +2216,90 @@ knitr::kable(data)
 <img src="image196.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
 
-## Match Significant p-value and Windows variance bigger than 0.5%
+## Comparison among ssGWAS for independent SNPs against Window 0.5% and window 0.1%
+
+### SNPs
 
 ```{r eval=FALSE}
-#Only significant SNPs after Genome Independent Segments adjust
-sigPvalue <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
-sigPvalue <- sigPvalue[, c("CHR", "BP", "LOG_P", "SNP_ID")]
+pvalue <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/gwas_ind_seg_sig_SNPname_rsID.csv")
+w05 <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_05.csv")
+w01 <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w10_snp_rsid_snpvar_01.csv")
 
-w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
-w_var <- filter(w_var, V3 > 0.5)
-colnames(w_var) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
 
-snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header = T)
 
-# Fazer o merge baseado em duas condições: CHR e POS
-merged_data <- merge(w_var, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
-w_var <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
+intersecpt_pv_w05_name <- intersect(pvalue$SNP_name, w05$SNP_name)
+intersecpt_pv_w01_name <- intersect(pvalue$SNP_name, w01$SNP_ID)
 
-# Get indices in w_var where SNP_ID matches those in sigPvalue
-indices <- which(w_var$SNP_ID %in% sigPvalue$SNP_ID)
 
-# Optionally extract the rows from w_var based on these indices
-matching_rows <- w_var[indices, ]
+# Create the matrix
+common_ids <- matrix(NA, nrow = length(intersecpt_pv_w01_name), ncol = 3)
+common_ids[, 1] <- intersecpt_pv_w01_name  # First column
+common_ids[, 2] <- ifelse(intersecpt_pv_w01_name %in% intersecpt_pv_w01_name, "YES", NA)
+common_ids[, 3] <- ifelse(intersecpt_pv_w01_name %in% intersecpt_pv_w05_name, "YES", NA)
+common_ids <- as.data.frame(common_ids)
+colnames(common_ids) <- c("P_value_SNPs", "W_0.1%_SNPs", "W_0.5%_SNPs")
+common_ids$rsID <- pvalue$rsID[match(common_ids$P_value_SNPs, pvalue$SNP_name)]
+common_ids <- common_ids[, c("P_value_SNPs", "rsID", "W_0.1%_SNPs", "W_0.5%_SNPs")]
 
-write.csv(matching_rows, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/pvalue_windowsVar_match.csv")
-write.csv(w_var, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/windowsVar_min05.csv")
-
-sum(matching_rows$Var)
-
+write_csv(common_ids, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/common_SNPs.csv")
 ```
 
-The 3 SNPs bellow were significant associated to cortisol considering the p-value adjusted for genome independent segments and also individually explain more than 0.5% of the variance.
+Bellow are the SNPs which had the p-value bellow bonferroni and also apeeared in the set of SNPs which explain more thant 0.5% or 0.1% of genetic variance.
+
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/pvalue_windowsVar_match.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/common_SNPs.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
 
 ```
 
-These 3 SNPs explain together **3,22%** of Variance and all of them fall in the gene **CSMD2**
 
-I checked if the genes found surrounding SNPs in "Regular Blup" and "Windows Blup" were the same.
+### Genes
 
 ```{r eval=FALSE}
-regGwas <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_genes_50k.csv")
+pvalue <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_genes_50k_pvalue.csv")
+w05 <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w_05.csv")
+w01 <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_genes_w01.csv")
 
-common_genes <- out.genes[out.genes$gene_id %in% regGwas$gene_id, ]
+intersecpt_pv_w05_name <- intersect(pvalue$gene_name, w05$gene_name)
+intersecpt_pv_w05_ID <- intersect(pvalue$gene_id, w05$gene_id)
 
-write.csv(common_genes, "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/common_genes.csv")
+intersecpt_pv_w01_name <- intersect(pvalue$gene_name, w01$gene_name)
+intersecpt_pv_w01_ID <- intersect(pvalue$gene_id, w01$gene_id)
+
+# Create the matrix
+common_ids <- matrix(NA, nrow = length(intersecpt_pv_w01_ID), ncol = 3)
+common_ids[, 1] <- intersecpt_pv_w01_ID  # First column
+common_ids[, 2] <- ifelse(intersecpt_pv_w01_ID %in% intersecpt_pv_w01_ID, "YES", NA)
+common_ids[, 3] <- ifelse(intersecpt_pv_w01_ID %in% intersecpt_pv_w05_ID, "YES", NA)
+common_ids <- as.data.frame(common_ids)
+colnames(common_ids) <- c("P_value_id", "W_0.1%", "W_0.5%")
+common_ids$P_value_name <- pvalue$gene_name[match(common_ids$P_value_id, pvalue$gene_id)]
+common_ids <- common_ids[, c("P_value_id", "P_value_name", "W_0.1%", "W_0.5%")]
+common_ids$gene_biotype <- pvalue$gene_biotype[match(common_ids$P_value_id, pvalue$gene_id)]
+
+write_csv(common_ids, "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/common_genes.csv")
+
 ```
 
-And the unique common gene surrounding the SNPs in both analysis were also **CSMD2**
+Bellow we can find the Genes that were found close (50kb) to SNPs that were:
+<ul>
+<li> Individually significant (P_value)
+<li> Explain more than 0.5% additive genetic variance
+<li> Explain more than 0.1% additive genetic variance
+</ul>
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/common_genes.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
 
 
 ## Allele frequency for GWAS output
@@ -2315,19 +2311,15 @@ I created the code bellow to find out the allele frequency for those most signif
 # Bringing SNP_ID to SNP_Frequency
 snpmap <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/snpmap.txt_clean", header=T)
 snpfreq <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/freqdata.count")
-map_freq <- merge(snpmap, snpfreq, by.x = "CHR", by.y = "V1")
-colnames(map_freq) <- c("CHR", "POS", "SNP_ID", "FREQ")
-write.csv(map_freq, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/allele_freq.csv")
+map_freq_var <- cbind(snpmap, snpfreq,snpWvar)
+colnames(map_freq_var) <- c("CHR", "POS", "SNP_ID", "SNP_ORDER", "FREQ", "V1", "V2", "Var", "snp", "chr", "pos")
+map_freq_var <- map_freq_var[,c("CHR", "POS", "SNP_ORDER", "SNP_ID", "FREQ", "Var") ]
+map_freq_var_w05 <- filter(map_freq_var, Var > 0.5)
+map_freq_var_w01 <- filter(map_freq_var, Var > 0.1)
+write.csv(map_freq_var_w05, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w05_allele_freq.csv")
+write.csv(map_freq_var_w01, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w01_allele_freq.csv")
 
 
-# Output for Variance explained by Window
-snpWvar <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/chrsnpvar", header = F)
-snpWvar <- filter(snpWvar, V3 > 0.5)
-colnames(snpWvar) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
-merged_data <- merge(snpWvar, snpmap, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
-snpWvar <- merged_data[,c("CHR", "BP", "Var", "SNP_ID")]
-var_freq <- merge(snpWvar, map_freq, by.x = "SNP_ID", by.y="SNP_ID") 
-write.csv(var_freq, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/window_10/w_allele_freq.csv")
 
 # Output for significant p-value
 
@@ -2351,15 +2343,20 @@ Me <- (2*NeL)/log10(NeL)
 # Calculate Bonferroni threshold (already done)
 bonf <- -log10(0.05 / Me)
 
+library(tidyverse)
 #import MARKER files = the GWAS output
 snpPval = read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/chrsnp_pval")
 colnames(snpPval) <- c("V1", "V2", "LOG_P", "SNP", "CHR", "BP")
-snpPval <- filter(snpPval, LOG_P >= bonf)
-snpPval <- snpPval[,c("LOG_P", "SNP", "CHR", "BP")]
-merged_data2 <- merge(snpPval, snpmap, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
-snpPval <- merged_data2[,c("CHR", "BP", "LOG_P", "SNP_ID")]
-pval_freq <- merge(snpPval, map_freq, by.x = "SNP_ID", by.y="SNP_ID") 
-write.csv(pval_freq, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/pval_allele_freq.csv")
+map_freq_logp <- cbind(snpmap, snpfreq,snpPval)
+map_freq_logp <- map_freq_logp[, c("CHR", "POS", "SNP", "SNP_ID", "V2", "LOG_P")]
+colnames(map_freq_logp) <- c("CHR", "POS", "SNP", "SNP_ID", "FREQ", "LOG_P")
+map_freq_logp <- filter(map_freq_logp, LOG_P >= bonf)
+write.csv(map_freq_logp, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/pval_allele_freq.csv")
+
+
+common_snp <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/common_SNPs.csv")
+common_snp$allele_freq <- map_freq_logp$FREQ[match(common_snp$P_value_SNPs, map_freq_logp$SNP_ID)]
+write.csv(map_freq_logp, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/common_SNPs_FREQ.csv")
 
 ```
 
@@ -2377,9 +2374,23 @@ knitr::kable(data)
 
 ### Windows ssGWAS
 
+#### 0.5%
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w_allele_freq.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w05_allele_freq.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+#### 0.1%
+As this table has 1,089 rows we are not showing here, but we are going to show bellow the allele frequency of the **common SNPs among p-value, Windows 0.5% and Windows 0.1% approach**:
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/common_SNPs_FREQ.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -2526,261 +2537,7 @@ ps. I double checked by hand the select and merge process against the original t
 
 ## Correlations - Linear Regression
 
-### Test with one trait
-
-```{r eval=FALSE}
-# Fit the linear regression model
-model <- lm(T4Cortisol ~ MILK, data = data)
-
-# Summarize the model to get the regression coefficients and statistical summary
-model_summary <- summary(model)
-
-# Extract the desired statistics
-multiple_r_squared <- model_summary$r.squared
-adjusted_r_squared <- model_summary$adj.r.squared
-f_statistic <- model_summary$fstatistic[1]
-p_value <- pf(model_summary$fstatistic[1], model_summary$fstatistic[2], model_summary$fstatistic[3], lower.tail = FALSE)
-
-# Combine the statistics into a data frame
-results <- data.frame(
-  Multiple_R_Squared = multiple_r_squared,
-  Adjusted_R_Squared = adjusted_r_squared,
-  F_Statistic = f_statistic,
-  P_Value = p_value
-)
-
-# Save the results to a CSV file
-write.csv(results, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_milk.csv", row.names = FALSE)
-
-# Plot the linear regression between T4Cortisol and MILK
-ggplot(data, aes(x = MILK, y = T4Cortisol)) +
-  geom_point() +  # Add points
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add linear regression line
-  labs(title = "Linear Regression of T4Cortisol on MILK",
-       x = "MILK",
-       y = "T4Cortisol") +
-  theme_minimal()
-
-```
-
-<span style="color: blue;">**Plot linear regression** Cortisol vs. Milk GEBV</span>
-<img src="image94.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
-
-<span style="color: blue;">**Summary statistics**</span>
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_milk.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
-
-
-### Loop for all traits
-
-As we have 54 GEBVs to fit a linear regression we designed a loop:
-
-```{r eval=FALSE}
-# Initialize a list to store the results
-results_list <- list()
-
-# Loop through columns 4 to ncol(data) for the GEBVs
-for (i in 4:ncol(data)) {
-  trait_name <- colnames(data)[i]
-  
-  # Fit the linear regression model
-  model <- lm(data[[2]] ~ data[[i]], data = data)
-  
-  # Summarize the model
-  model_summary <- summary(model)
-  
-  # Extract the desired statistics
-  multiple_r_squared <- model_summary$r.squared
-  adjusted_r_squared <- model_summary$adj.r.squared
-  f_statistic <- model_summary$fstatistic[1] # F-statistic value
-  f_num_df <- model_summary$fstatistic[2] # Numerator degrees of freedom
-  f_den_df <- model_summary$fstatistic[3] # Denominator degrees of freedom
-  p_value <- pf(f_statistic, f_num_df, f_den_df, lower.tail = FALSE) # P-value
-  
-  # Extract the coefficient and its p-value for the trait
-  coef_summary <- coef(model_summary)
-  trait_coef <- coef_summary[2, "Estimate"]  # Assumes the trait is the second predictor
-  trait_p_value <- coef_summary[2, "Pr(>|t|)"]
-  
-  # Combine the statistics into a data frame
-  result <- data.frame(
-    Trait = trait_name,
-    Multiple_R_Squared = multiple_r_squared,
-    Adjusted_R_Squared = adjusted_r_squared,
-    F_Statistic = f_statistic,
-    P_Value = p_value,
-    Coefficient = trait_coef,
-    Coefficient_P_Value = trait_p_value
-  )
-  
-  # Append the result to the results list
-  results_list[[i - 3]] <- result
-}
-
-# Combine all results into a single data frame
-results_df_0 <- do.call(rbind, results_list)
-
-# Save the results to a CSV file
-write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_all_traits.csv", row.names = FALSE)
-
-```
-
-<span style="color: blue;">**Summary statistics for all Traits' GEBVs**</span>
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_all_traits.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
-
-
-Five out 54 traits GEBVs presented significant correlations with Cortisol:
-<ul>
-<li> BMR = Body Maintenance Requirements
-<li> CO = Cystic ovaries
-<li> MSL = Median Suspensory Ligament
-<li> CTFS = Calving to First Service
-<li> UT = Udder Texture
-</ul>
-
-### Adding BIRTH_YEAR  
-
-
-#### Model Description
-
-The regression model added the BY is shown bellow:
-
-\[ y = \beta_0 + \beta_1 \times GEBV_{\text{Trait}} + BIRTH\_YEAR + \epsilon \]
-
-Where:
-
-- \( y \) represents Cortisol phenotypes.
-- \( GEBV_{\text{Trait}} \) denotes the GEBV for the specific trait (e.g., Milk Yield).
-- \( BIRTH\_YEAR \) is the birth year of the subjects, included as a factor.
-- \( \beta_0 \) and \( \beta_1 \) are the intercept and regression coefficient, respectively.
-- \( \epsilon \) represents the error term capturing unexplained variability.
-
-
-The `BIRTH_YEAR` variable is converted to a factor to account for the categorical nature of birth years.
-
-
-```{r eval=FALSE}
-
-# Convert BIRTH_YEAR to a factor and rename
-data$BIRTH_YEAR <- as.factor(data$BIRTH_YEAR)
-
-# Initialize a list to store the results
-results_list <- list()
-
-# Loop through columns 3 to ncol(data) for the GEBVs
-for (i in 4:ncol(data)) {
-  trait_name <- colnames(data)[i]
-  
-  # Fit the linear regression model with BIRTH_YEAR as an additional predictor
-  model <- lm(data[[2]] ~ data[[i]] + BIRTH_YEAR, data = data)
-  
-  # Summarize the model
-  model_summary <- summary(model)
-  
-  # Extract the desired statistics
-  multiple_r_squared <- model_summary$r.squared
-  adjusted_r_squared <- model_summary$adj.r.squared
-  f_statistic <- model_summary$fstatistic[1] # F-statistic value
-  f_num_df <- model_summary$fstatistic[2] # Numerator degrees of freedom
-  f_den_df <- model_summary$fstatistic[3] # Denominator degrees of freedom
-  p_value <- pf(f_statistic, f_num_df, f_den_df, lower.tail = FALSE) # P-value
-  
-  # Extract the coefficient and its p-value for the trait
-  coef_summary <- coef(model_summary)
-  trait_coef <- coef_summary[2, "Estimate"]  # Assumes the trait is the second predictor
-  trait_p_value <- coef_summary[2, "Pr(>|t|)"]
-  
-  # Combine the statistics into a data frame
-  result <- data.frame(
-    Trait = trait_name,
-    Multiple_R_Squared = multiple_r_squared,
-    Adjusted_R_Squared = adjusted_r_squared,
-    F_Statistic = f_statistic,
-    P_Value = p_value,
-    Coefficient = trait_coef,
-    Coefficient_P_Value = trait_p_value
-  )
-  
-  # Append the result to the results list
-  results_list[[i - 2]] <- result
-}
-
-# Combine all results into a single data frame
-results_df <- do.call(rbind, results_list)
-
-# Save the results to a CSV file
-write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/regression_summary_all_traits_BY.csv", row.names = FALSE)
-
-```
-
-<span style="color: blue;">**Summary statistics for all Traits' GEBVs adding BIRTY_YEAR**</span>
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/regression_summary_all_traits_BY.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
-
-Fitting Birth_Year to the model made one more trait significativally correlated with cortisol and enhanced the proportio of variation explained by the model:
-<ul>
-<li> BMR = Body Maintenance Requirements
-<li> CO = Cystic ovaries
-<li> MSL = Median Suspensory Ligament
-<li> CTFS = Calving to First Service
-<li> UT = Udder Texture
-<li> **IH = Interdigital Hyperplasia**
-</ul>
-
-
-Below we can check the improvement in the percentage of variation in Cortisol explained by the Trait_GEBVs + Birth_Year.
-
-```{r eval=FALSE}
-CORR_BY <- read.csv("/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/regression_summary_all_traits_BY.csv")
-
-CORR_MIN <- read.csv("/home/bambrozi/2_CORTISOL/Correlation/Results/regression_summary_all_traits.csv")
-
-CORR_BY <- CORR_BY[, c("Trait", "Adjusted_R_Squared"), drop = FALSE]
-
-CORR_MIN <- CORR_MIN[, c("Trait", "Adjusted_R_Squared"), drop = FALSE]
-
-colnames(CORR_BY)[colnames(CORR_BY) == "Adjusted_R_Squared"] <- "Adjusted_R_Squared_BY"
-
-colnames(CORR_MIN)[colnames(CORR_MIN) == "Adjusted_R_Squared"] <- "Adjusted_R_Squared_MIN"
-
-Corr_R2_comp <- merge(CORR_MIN, CORR_BY, by.x = "Trait", by.y = "Trait")
-
-Corr_R2_comp$Absolute_Change <- Corr_R2_comp$Adjusted_R_Squared_BY - Corr_R2_comp$Adjusted_R_Squared_MIN
-
-write.csv(Corr_R2_comp, "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/absolute_improv_r2.csv")
-```
-
-
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/absolute_improv_r2.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
-*Adjusted_R_Squared_Model_MIN = Model without Birth Year*  
-*Adjusted_R_Squared_MIN.BY = Model adding Birth Year*
-
+We tested the minimum model presented above, and adding only Birth Year,  but adding Birth Year and Sampling Date we got the best results.
 
 ### Adding BIRTH_YEAR and SAMPLING DATE
 
@@ -2852,7 +2609,7 @@ for (i in 5:ncol(data_final)) {
 results_df <- do.call(rbind, results_list)
 
 # Save the results to a CSV file
-write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY/regression_summary_all_traits_BY.csv", row.names = FALSE)
+write.csv(results_df, file = "/home/bambrozi/2_CORTISOL/Correlation/Results/add_BY_SAMP/regression_summary_all_traits_BY_SampDt.csv", row.names = FALSE)
 ```
 
 <span style="color: blue;">**Summary statistics for all Traits' GEBVs adding BIRTY_YEAR and SAMPLING_DATE**</span>
@@ -2866,7 +2623,7 @@ knitr::kable(data)
 ```
 
 
-Fitting Birth_Year and Sampling_date to the model these are the traits with significant correlation:
+Fitting Birth_Year and Sampling_date to the model these are the traits with significant correlation **(<0.15)**:
 <ul>
 <li> CO = Cystic ovaries
 <li> BMR = Body Maintenance Requirements
@@ -2874,6 +2631,9 @@ Fitting Birth_Year and Sampling_date to the model these are the traits with sign
 <li> MILK = Milk yield
 <li> PROT = Protein yield
 <li> UT = Udder Texture
+<li> CK = Clinical Ketosis
+<li> HHE = Heel Horn Erosion
+<li> MSP = Milking Speed
 </ul>
 
 
