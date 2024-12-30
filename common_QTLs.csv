@@ -1,0 +1,51 @@
+P_value_id,W_0.1%,W_0.5%,P_value_name,QTL_type
+137202,YES,NA,Bovine respiratory disease susceptibility,Health
+170274,YES,NA,Fecal larva count,Health
+170275,YES,NA,Fecal larva count,Health
+170276,YES,NA,Fecal larva count,Health
+30008,YES,YES,Interval to first estrus after calving,Reproduction
+30244,YES,YES,Interval to first estrus after calving,Reproduction
+152258,YES,YES,Muscle sodium content,Meat_and_Carcass
+225527,YES,YES,Shear force,Meat_and_Carcass
+25606,YES,NA,Milk yield,Milk
+26355,YES,NA,Milk protein yield,Milk
+36989,YES,NA,Lean meat yield,Meat_and_Carcass
+104606,YES,NA,Milk fat percentage,Milk
+104607,YES,NA,Milk fat percentage,Milk
+220989,YES,NA,Interdigital hyperplasia,Exterior
+122755,YES,NA,Length of productive life,Production
+123539,YES,NA,Length of productive life,Production
+122756,YES,NA,Length of productive life,Production
+123540,YES,NA,Length of productive life,Production
+122757,YES,NA,Length of productive life,Production
+123541,YES,NA,Length of productive life,Production
+122758,YES,NA,Length of productive life,Production
+123542,YES,NA,Length of productive life,Production
+122759,YES,NA,Length of productive life,Production
+123543,YES,NA,Length of productive life,Production
+122760,YES,NA,Length of productive life,Production
+123544,YES,NA,Length of productive life,Production
+200902,YES,NA,Milk pentadecylic acid content,Milk
+202500,YES,NA,Milk pentadecylic acid content,Milk
+202905,YES,NA,Milk pentadecylic acid content,Milk
+201638,YES,NA,Milk pentadecylic acid content,Milk
+202885,YES,NA,Milk pentadecylic acid content,Milk
+39599,YES,NA,Calving ease,Reproduction
+39600,YES,NA,Pregnancy rate,Reproduction
+39601,YES,NA,Stillbirth,Reproduction
+39602,YES,NA,Foot angle,Exterior
+39603,YES,NA,Feet and leg conformation,Exterior
+39604,YES,NA,Milk fat percentage,Milk
+39605,YES,NA,PTA type,Production
+39606,YES,NA,Udder attachment,Exterior
+39607,YES,NA,Milk fat yield,Milk
+39608,YES,NA,Net merit,Production
+39609,YES,NA,Length of productive life,Production
+39610,YES,NA,Rear leg placement - side view,Exterior
+39611,YES,NA,Udder height,Exterior
+39612,YES,NA,Rump width,Production
+39613,YES,NA,Calving ease,Reproduction
+39614,YES,NA,Somatic cell score,Health
+39615,YES,NA,Strength,Exterior
+39616,YES,NA,Udder depth,Exterior
+125235,YES,NA,Multiple birth,Reproduction
