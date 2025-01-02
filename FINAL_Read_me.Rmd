@@ -704,7 +704,7 @@ write.table(mapfile, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/snpmap.txt", col.na
 ```
 
 
-### Parameter file for Quality Control
+### Variance component estimation
 
 But, before running the GEBV we will first perform one additional step to "CLEAN" our genotypes. Actually BLUPF90 by default perform a data cleaning with pre set parameters, but as HWE is not used by default, we will perform this additional step.
 
@@ -949,6 +949,7 @@ To do this, I'll:
 </ul>
 
 ### Prediction of SNP marker effects based on the GEBV
+
 ### GWAS for High and Low cortisol animals
 
 Now we'll run a new analysis using the Variance Components Estimation from the previous step to perform the GWAS.
