@@ -2967,5 +2967,73 @@ In our example:
 <img src="image103.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 
+## Additional analysis
+
+### Age at sampling date
+```{r eval=FALSE}
+Merg_Cort_GEBVs <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/Merged_Cortisol_GEBVs.csv")
+
+#Opening the file with the GEBVs columns to use
+Columns_to_use <- readLines("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/traits_to_use.txt")
+
+colnames(Merg_Cort_GEBVs)[405] <- "IDD"
+
+data <- select(Merg_Cort_GEBVs, ID, T4Cortisol, BIRTH_YEAR, BIRTH_DATE, all_of(Columns_to_use))
+
+samp_date2 <- read.csv("/home/bambrozi/2_CORTISOL/Data/Elora animal_ids_kl_sampling_date.csv")
+
+# Convert Sampling_date to Date using as.Date
+samp_date2$Sampling_date <- as.Date(samp_date2$Sampling_date, format = "%m/%d/%Y")
+
+table(samp_date2$Sampling_date)
+
+samp_date <- select(samp_date2, Elora_id, Sampling_date)
+
+# Check if data$ID and samp_dates$elora_id are identical in values and order
+identical(data$ID, samp_date$Elora_id)
+
+data_final <- merge(data, samp_date, by.x="ID", by.y="Elora_id")
+
+data_final <- data_final %>%
+  select(ID, T4Cortisol, BIRTH_YEAR, BIRTH_DATE, Sampling_date)
+
+library(lubridate)
+
+data_final$BIRTH_DATE <- ymd(data_final$BIRTH_DATE)
+
+# Calculate age in total days
+data_final$Age_days <- as.numeric(difftime(data_final$Sampling_date, data_final$BIRTH_DATE, units = "days"))
+
+
+# The data below has the the 55 GEBVs + Cortisol data + Birth Year + Sampling data
+write.csv(data_final, "/home/bambrozi/2_CORTISOL/Data/data_age_samplingdate.csv")
+
+# Calculate values
+average_age <- mean(data_final$Age_days, na.rm = TRUE)
+sd_age <- sd(data_final$Age_days, na.rm = TRUE)
+median_age <- median(data_final$Age_days, na.rm = TRUE)
+range_age <- range(data_final$Age_days, na.rm = TRUE)
+
+# Create a data frame to save
+age_summary <- data.frame(
+  Metric = c("Mean", "Standard Deviation", "Median", "Min", "Max"),
+  Value = c(average_age, sd_age, median_age, range_age[1], range_age[2])
+)
+
+# Save to a CSV file
+write.csv(age_summary, "/home/bambrozi/2_CORTISOL/Data/age_summary.csv", row.names = FALSE)
+
+```
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/age_summary.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
 
 
