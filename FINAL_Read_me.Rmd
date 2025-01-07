@@ -3034,6 +3034,50 @@ knitr::kable(data)
 
 ```
 
+### Common enriched QTLs
+
+```{r eval=FALSE}
+qtl_pval <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/out_enrich_qtl_genome_name_pvalue.csv")
+qtl_w05 <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_name_w05.csv")
+qtl_w01 <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_name_w01.csv")
+
+library(tidyverse)
+
+qtl_pval <- filter(qtl_pval, adj.pval <= 0.05) 
+qtl_w05 <- filter(qtl_w05, adj.pval <= 0.05) 
+qtl_w01 <- filter(qtl_w01, adj.pval <= 0.05) 
+
+qtl_pval$approach <- "pval"
+qtl_w05$approach <- "w05"
+qtl_w01$approach <- "w01"
+
+qtl_all_approachs <- rbind(qtl_pval, qtl_w05, qtl_w01)
+
+write.csv(qtl_all_approachs, "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/enrich_sig_qtl_all_approachs.csv")
+
+qtl_names <- unique(qtl_all_approachs$QTL)
+
+qtl_names <- sort(qtl_names)
+
+
+# Create a matrix with the desired dimensions
+matrix_length <- length(qtl_names)
+common_enrich_qtl <- matrix(NA, nrow = matrix_length, ncol = 4)
+
+# Optionally, name the rows and columns
+colnames(common_enrich_qtl) <- c("QTL_names", "Single_SNP", "Windows_0.5", "Windows_0.1")
+
+common_enrich_qtl[, "QTL_names"] <- qtl_names
+
+common_enrich_qtl <- as.data.frame(common_enrich_qtl)
+
+# Ensure both vectors have the same length (or handle if they don't)
+common_enrich_qtl$Single_SNP <- ifelse(common_enrich_qtl$QTL_names %in% qtl_pval$QTL, "yes", NA)
+common_enrich_qtl$Windows_0.5 <- ifelse(common_enrich_qtl$QTL_names %in% qtl_w05$QTL, "yes", NA)
+common_enrich_qtl$Windows_0.1 <- ifelse(common_enrich_qtl$QTL_names %in% qtl_w01$QTL, "yes", NA)
+
+write.csv(common_enrich_qtl, "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/common_enrich_qtl.csv")
+```
 
 
 

@@ -1,0 +1,57 @@
+"","QTL_names","Single_SNP","Windows_0.5","Windows_0.1"
+"1","Aggressive behavior","yes",NA,NA
+"2","Atherogenic index",NA,NA,"yes"
+"3","Average daily gain",NA,NA,"yes"
+"4","Body temperature",NA,"yes","yes"
+"5","Body weight","yes",NA,NA
+"6","Bovine respiratory disease susceptibility",NA,NA,"yes"
+"7","Calving ease",NA,"yes",NA
+"8","Clinical mastitis",NA,NA,"yes"
+"9","Dry matter intake","yes",NA,NA
+"10","Dystocia","yes",NA,NA
+"11","Eye area pigmentation",NA,NA,"yes"
+"12","Fecal larva count","yes",NA,NA
+"13","Feet and leg conformation",NA,"yes",NA
+"14","Fertility index",NA,"yes",NA
+"15","Foot angle",NA,"yes",NA
+"16","Head width",NA,"yes",NA
+"17","Infectious bovine keratoconjunctivitis susceptibility",NA,NA,"yes"
+"18","Ketosis",NA,NA,"yes"
+"19","Length of productive life","yes","yes","yes"
+"20","Metabolic body weight","yes",NA,"yes"
+"21","Milk alpha-S2-casein percentage",NA,NA,"yes"
+"22","Milk beta-lactoglobulin protein content",NA,NA,"yes"
+"23","Milk butyric acid content","yes",NA,"yes"
+"24","Milk capric acid content",NA,NA,"yes"
+"25","Milk caproic acid content","yes",NA,NA
+"26","Milk glycosylated kappa-casein percentage",NA,NA,"yes"
+"27","Milk iron content","yes",NA,NA
+"28","Milk lauric acid content",NA,NA,"yes"
+"29","Milk myristic acid content",NA,NA,"yes"
+"30","Milk pentadecylic acid content","yes",NA,NA
+"31","Milk phosphorylated alpha-S2-casein percentage",NA,NA,"yes"
+"32","Milk potassium content",NA,NA,"yes"
+"33","Milk protein yield",NA,NA,"yes"
+"34","Milk saturated fatty acid content",NA,NA,"yes"
+"35","Milk tridecylic acid content",NA,"yes",NA
+"36","Milk unsaturated fatty acid content",NA,NA,"yes"
+"37","Monounsaturated fatty acid content",NA,NA,"yes"
+"38","Monounsaturated to saturated fatty acid ratio",NA,NA,"yes"
+"39","Myristic acid content",NA,NA,"yes"
+"40","Myristoleic acid content",NA,NA,"yes"
+"41","Net merit",NA,"yes",NA
+"42","Non-return rate",NA,NA,"yes"
+"43","Oleic acid content",NA,NA,"yes"
+"44","Palmitic acid content",NA,NA,"yes"
+"45","Palmitoleic acid content",NA,NA,"yes"
+"46","PTA type",NA,"yes",NA
+"47","Rear leg placement - rear view",NA,"yes",NA
+"48","Rear leg placement - side view",NA,"yes",NA
+"49","Respiratory rate",NA,"yes",NA
+"50","Rump conformation",NA,"yes",NA
+"51","Saturated fatty acid content",NA,NA,"yes"
+"52","Stillbirth",NA,"yes",NA
+"53","Strength",NA,"yes",NA
+"54","Teat placement - front",NA,"yes",NA
+"55","Udder attachment",NA,"yes",NA
+"56","Udder depth",NA,"yes",NA
