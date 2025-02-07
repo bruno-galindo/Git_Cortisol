@@ -1801,7 +1801,10 @@ The parameter file above will generate the following files:
 <ul>
 <li> column 1: trait
 <li> column 2: effect
-<li> column 3: variance explained by n adjacents SNP
+<li> column 3: variance explained by n adjacents SNP 
+<ul>
+<li> If windows size is 20, the proportion of variance assigned to SNP 1 is calculated from SNP 1 to 20, for SNP 2 it goes from 2 to 21
+</ul>
 <li> column 4: SNP
 <li> column 5: Chromosome
 <li> column 6: Position
@@ -1955,6 +1958,80 @@ dev.off()
 
 <img src="image191.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+### Finding p-values for each SNP in the window
+
+```{r eval=FALSE}
+
+
+chrsnpvar <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar", header = F)
+chrsnpvar <- filter(chrsnpvar, V3 > 0.5)
+colnames(chrsnpvar) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
+
+# as the column 3: -log10(p-value) of this file doesn't say that this p-value is for the window, I'm assuming that this p-value is for individual SNP
+chrsnp_pval <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnp_pval", header = F)
+colnames(chrsnp_pval) <- c("trait", "effect", "-log10(p-value)", "SNP", "Chromosome", "Position in bp")
+
+merged_table <- merge(chrsnp_pval, chrsnpvar, by = "SNP")
+
+merged_table <- merged_table[, c("trait", "effect", "SNP", "CHR", "BP", "Var", "-log10(p-value)")]
+
+merged_table$p_value <- 10^(-merged_table$`-log10(p-value)`)
+
+snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/snpmap.txt_clean", header = T)
+
+var_pval <- merge(merged_table, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
+
+var_pval <- var_pval[, c("SNP_ID", "SNP", "CHR", "BP", "trait", "effect", "Var", "p_value", "-log10(p-value)")]
+
+write.csv(var_pval, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/pval_for_first_snp_in_each_window.csv")
+
+#####
+
+# Bringing p-value for each snp in the window
+
+# Create an empty row with the same column names
+empty_row <- chrsnpvar[1, ]
+empty_row[,] <- NA  # Set all values to NA
+
+# Create a new dataframe with gaps
+expanded_df <- do.call(rbind, lapply(1:nrow(chrsnpvar), function(i) {
+  rbind(chrsnpvar[i, ], empty_row[rep(1, 9), ])
+}))
+
+# Reset row names
+rownames(expanded_df) <- NULL
+
+# Ensure the SNP column is numeric
+expanded_df$SNP <- as.numeric(expanded_df$SNP)
+
+# Loop through the dataframe and fill empty SNP values with sequential numbers
+for (i in seq_len(nrow(expanded_df))) {
+  if (is.na(expanded_df$SNP[i])) {
+    expanded_df$SNP[i] <- expanded_df$SNP[i - 1] + 1
+  }
+}
+
+
+# Assuming your data frame is called df
+expanded_df$index <- 1:nrow(expanded_df)
+merged_pvalue_var <- merge(chrsnp_pval, expanded_df, by = "SNP")
+merged_pvalue_var <- arrange(merged_pvalue_var, index)
+
+merged_pvalue_var$p_value <- 10^(-merged_pvalue_var$`-log10(p-value)`)
+
+merged_pvalue_var <- merge(merged_pvalue_var, snp_map, by.x = c("Chromosome", "Position in bp"), by.y = c("CHR", "POS"), all.x = TRUE)
+
+merged_pvalue_var <- arrange(merged_pvalue_var, index)
+
+pvalue_var_allsnps <- merged_pvalue_var[, c("index", "Chromosome", "Position in bp",
+                                            "SNP", "SNP_ID", "-log10(p-value)",
+                                            "p_value", "Var")]
+
+write.csv(pvalue_var_allsnps, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/pval_for_each_snp_in_window.csv")
+
+
+
+```
 
 
 ### 0.5% Windows - BLUPF90+ GALLO
