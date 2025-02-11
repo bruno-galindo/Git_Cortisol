@@ -1356,6 +1356,209 @@ OPTION saveA22Inverse
 OPTION snp_p_value
 ```
 
+#### Running renf90_ssGWAS2_SNPeff.par for GWAS
+
+The parameter card bellow we are going to run using the software **postGSf90**:
+/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_ssGWAS2_SNPeff.par
+
+```{bash eval= FALSE}
+# BLUPF90 parameter file created by RENUMF90
+DATAFILE
+ renf90.dat
+NUMBER_OF_TRAITS
+           1
+NUMBER_OF_EFFECTS
+           3
+OBSERVATION(S)
+    1
+WEIGHT(S)
+ 
+EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
+ 2         4 cross 
+ 3        22 cross 
+ 4      3724 cross 
+RANDOM_RESIDUAL VALUES
+   77182.    
+ RANDOM_GROUP
+     3
+ RANDOM_TYPE
+ add_an_upginb
+ FILE
+renadd03.ped                                                                    
+(CO)VARIANCES
+   28212.    
+OPTION SNP_file bruno_gntps_iid_71_clean
+OPTION origID
+OPTION no_quality_control
+OPTION readGInverse
+OPTION readA22Inverse
+OPTION map_file snpmap.txt_clean
+OPTION snp_p_value
+OPTION Manhattan_plot_R
+OPTION Manhattan_plot 
+```
+
+This code will generate several files, among them:
+<ul>
+<li> **chrsnp_pval**: 
+<ul>
+<li> Column 1: trait
+<li> Column 2: effect
+<li> Column 3: -log10(p-value)
+<li> Column 4: SNP
+<li> Column 5: Chromosome
+<li> Column 6: Position in bp
+</ul>
+<li> **Pft1e3.R**: a r-code to generate the Manhattan plot in R using the chrsnp_pval
+</ul>
+
+
+#### Manhattan Plots for BLUPF90 GWAS
+
+##### Genome Independent Segment
+To make the Manhattan Plot considering Genome Independent Segment we should run the code bellow. This code has part of the code in the file **Pft1e3.R**
+
+```{r eval=FALSE}
+Genome_Assembly_ARS_UCD_1_2 <- read_tsv("/home/bambrozi/2_CORTISOL/GWAS/sequence_report_ARS-UCD1_2.tsv")
+
+library(dplyr)
+# Filter the rows and sum the Seq length column
+# Assuming your data frame is named Genome_Assembly_ARS_UCD_1_2
+L <- Genome_Assembly_ARS_UCD_1_2 %>%
+  filter(`UCSC style name` %in% paste0("chr", 1:29)) %>%
+  summarise(total_length = sum(`Seq length`)) %>%
+  pull(total_length)
+
+# Converting bases to Morgan (1Mb = 1cM (0,01 Morgan))
+L_M <- L/10^8
+
+# The Ne measure is based on the article bellow:
+Ne <- 66 #(Makanjoula et al., 2020)
+
+NeL <- Ne*L_M
+
+# This is the number of independent segment in the genome.
+Me <- (2*NeL)/log10(NeL)
+
+
+# Calculate Bonferroni threshold (already done)
+bonf <- -log10(0.05 / Me)
+
+
+setwd("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno")
+# Read in and process data for Manhattan plot
+yyy1 <- read.table("chrsnp_pval")
+yyy <- yyy1[order(yyy1$V4), ]
+zzz <- yyy[which(yyy$V1 == 1 & yyy$V2 == 3), ]
+n <- nrow(zzz)
+y <- zzz[, 4]
+x <- zzz[, 3]
+chr1 <- zzz[, 5]
+chr <- NULL
+pos <- NULL
+
+for (i in unique(yyy$V5)) {
+  zz <- yyy[yyy$V5 == i, ]
+  key <- zz$V4
+  medio <- round(nrow(zz) / 2, 0)
+  z <- key[medio]
+  pos <- c(pos, z)
+}
+
+chrn <- unique(yyy$V5)
+one <- which(chr1 %% 4 == 0)
+two <- which(chr1 %% 4 == 1)
+three <- which(chr1 %% 4 == 2)
+four <- which(chr1 %% 4 == 3)
+chr[one] <- "darkgoldenrod"
+chr[two] <- "darkorchid"
+chr[three] <- "blue"
+chr[four] <- "forestgreen"
+
+# Create Manhattan plot with Bonferroni line and legend
+png(file = "Pft1e3_manplot_with_bonf_ind_seg.png", width = 20000, height = 10000, res = 600)
+par(mfrow = c(1, 1), family = "sans", cex = 1.5, font = 2)
+plot(y, x, xaxt = "n", main = "Manhattan Plot SNP p_value - Trait: 1 Effect: 3", xlab = "", ylab = "-log10(p-value)", pch = 20, xlim = c(1, n), ylim = c(0, max(x)), col = chr)
+
+# Add Bonferroni line
+abline(h = bonf, col = "red", lwd = 2, lty = 2)
+
+# Add legend for Bonferroni line
+legend("topright", legend = "Bonferroni correction for genome independent segments", col = "red", lwd = 2, lty = 2, cex = 1)
+
+axis(1, at = pos, labels = chrn)
+dev.off()
+
+```
+
+<img src="image129b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+
+#### Get rsID
+
+For additional analysis like Variant Effect Prediction (VEP) we need the rsID, to get the rsID we use the software SNPChimp which requires SNP_names, but the BLUPF90 output have only the Chromosome and Position of the SNPs, so we are going to perfome these two steps to get one file with t he significant SNPs + SNP_name + rsID
+
+##### Step 01 = Bring the SNP name to GWAS output
+
+For this analysis we have to build this new sheet bringing SNP ID from snpmap.txt
+```{r eval=FALSE}
+gwas = read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval")
+colnames(gwas) <- c("V1", "V2", "LOG_P", "SNP", "CHR", "BP")
+gwas <- filter(gwas, LOG_P >= bonf)
+
+snpmap <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/snpmap.txt", header = T)
+
+# Filter snpmap to only include rows that match the CHR and BP values in out_genes
+filtered_snpmap <- snpmap[snpmap$CHR %in% gwas$CHR & snpmap$POS %in% gwas$BP, ]
+
+# Merge the filtered snpmap with out_genes
+gwas_snpname <- merge(gwas, filtered_snpmap[, c("CHR", "POS", "SNP_ID")], 
+                   by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), 
+                   all.x = TRUE)
+
+gwas_snpname <- gwas_snpname[,c("CHR", "BP", "LOG_P", "SNP_ID")]
+
+write.csv(gwas_snpname, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
+```
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+
+##### Step 02 = Bring the rsID  to the file with SNP name.
+After get the **rsID** from SNPCHIMP I produced this table with the code bellow:
+
+```{r eval=FALSE}
+rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/SNPchimp_result_2150988331.tsv", header = T)
+
+merged <- merge(rsid, gwas_snpname, by.x ="SNP_name", by.y ="SNP_ID")
+
+colnames(merged)
+
+merged <- merged[,c("SNP_name", "rs", "CHR", "BP", "LOG_P")]
+
+colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "LOG_P")
+
+write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/gwas_ind_seg_sig_SNPname_rsID.csv")
+
+```
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gwas_ind_seg_sig_SNPname_rsID.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
 
 ## BLUPF90+ WINDOWS
 ### Running renf90_ssGWAS2_SNPeff_W_10.par for GWAS (WINDOWS)
@@ -1584,30 +1787,28 @@ dev.off()
 
 ### Finding p-values for each SNP in the window
 
+To bring the p-value for each snp in the window we need to use files from different approachs:
+<ul>
+<li> chrsnpvar: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar</p>
+<ul>
+<li> which contains the variance explained by each window. This file is from windows approach
+</ul>
+<li> chrsnp_pval: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval</p>
+<ul>
+<li> which contains the p-value for each snp. This file is not from windows approach. Is for the approach which considers each SNP individually (beside fit all SNPs at the same time)
+</ul>
+</ul>
+
 ```{r eval=FALSE}
-
-
 chrsnpvar <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar", header = F)
 chrsnpvar <- filter(chrsnpvar, V3 > 0.5)
 colnames(chrsnpvar) <- c("V1", "V2", "Var", "SNP", "CHR", "BP")
 
 # as the column 3: -log10(p-value) of this file doesn't say that this p-value is for the window, I'm assuming that this p-value is for individual SNP
-chrsnp_pval <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnp_pval", header = F)
+chrsnp_pval <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval", header = F)
 colnames(chrsnp_pval) <- c("trait", "effect", "-log10(p-value)", "SNP", "Chromosome", "Position in bp")
 
-merged_table <- merge(chrsnp_pval, chrsnpvar, by = "SNP")
-
-merged_table <- merged_table[, c("trait", "effect", "SNP", "CHR", "BP", "Var", "-log10(p-value)")]
-
-merged_table$p_value <- 10^(-merged_table$`-log10(p-value)`)
-
 snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/snpmap.txt_clean", header = T)
-
-var_pval <- merge(merged_table, snp_map, by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), all.x = TRUE)
-
-var_pval <- var_pval[, c("SNP_ID", "SNP", "CHR", "BP", "trait", "effect", "Var", "p_value", "-log10(p-value)")]
-
-write.csv(var_pval, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/pval_for_first_snp_in_each_window.csv")
 
 #####
 
@@ -1652,11 +1853,24 @@ pvalue_var_allsnps <- merged_pvalue_var[, c("index", "Chromosome", "Position in 
                                             "p_value", "Var")]
 
 write.csv(pvalue_var_allsnps, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/pval_for_each_snp_in_window.csv")
+```
 
+
+The p-value for each SNP in the window is bellow:
+
+
+```{r echo=FALSE}
+library(readxl)
+library(knitr)
+
+# Read the Excel file (first sheet by default)
+data <- read_excel("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/pval_for_each_snp_in_window.xlsx")
+
+# Print the table
+knitr::kable(data)
 
 
 ```
-
 
 ### 0.5% Windows - BLUPF90+ GALLO
 
