@@ -839,7 +839,7 @@ First we are going to generate a Phenotype_Fixed_Effect file with the whole samp
 
 To get in one file these four columns we need the following code:
 
-
+okok
 ```{r eval=FALSE}
 pheno <- read.table("/home/bambrozi/2_CORTISOL/GWAS/pheno_genotyped.txt", header = T)
 data_final <- read.csv("/home/bambrozi/2_CORTISOL/RawFiles/GEBVs_Elora/data_GEBVs_Cortisol_select_traits2.csv", header = T)
@@ -896,10 +896,16 @@ The appearance of this file is like this:
 The file should be saved as text file, with separation by space and no columns names.
 
 We used the code below to remove the commas of a .csv file to a file with sepation by spaces.
+
+<font color="blue">/home/bambrozi/2_CORTISOL/RawFiles/Pedigree</font>
+okok
 ```{bash eval=FALSE}
 # to replace comma for space in the .csv file with the equivalence among IDs
-sed -i 's/,/ /g' bruno_ids.csv
+# /home/bambrozi/2_CORTISOL/RawFiles/Pedigree
+sed 's/,/ /g' bruno_ped.iid.csv > bruno_ped_iid_blup.txt
 ```
+
+
 
 ### Genotype file
 
@@ -916,7 +922,7 @@ The file should be saved as text file, with separation by space and no columns n
 
 We  used the code below to replace the cid for iid. First we merge using the second column of the firs file, and the first column of the second file. Then we use again the command awk to keep only the third and fifth columsn and sabe in a different object.
 
-
+<font color="blue">/home/bambrozi/2_CORTISOL/RawFiles/Genotypes</font>
 
 ```{bash eval=FALSE}
 # Using the awk function to merge the two files and the second awk to select only the 3rd and 5fh columns
@@ -941,6 +947,8 @@ Download from this website <https://nce.ads.uga.edu/html/projects/programs/Linux
 
 ### SNP MAP
 
+<font color="blue">/home/bambrozi/2_CORTISOL/RawFiles/SNP_map</font>
+okok
 ```{r eval = FALSE}
 mapfile <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/DGVsnpinfo.2404.ho", header = T)
 
@@ -960,8 +968,9 @@ But, before running the GEBV we will first perform one additional step to "CLEAN
 
 The Parameter card for this step is the parameter bellow:
 
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renum_QC.par
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renum_QC.par</font>
 
+okok
 ```{bash eval= FALSE}
 
 DATAFILE
@@ -1061,10 +1070,11 @@ We modified **renf90.par** in:
 ### Quality control
 
 The parameter card to perform the **Quality Control** is: 
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_DataClean.par
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_DataClean.par</font>
+
 
 It will run using the software pre **preGS90** to generate the Clean Genotype and SNP_MAP files after Quality Control.
-
+okok
 ```{bash eval= FALSE}
 # BLUPF90 parameter file created by RENUMF90
 DATAFILE
@@ -1104,10 +1114,10 @@ OPTION excludeCHR 30 31
 ### VCE
 
 The second parameter card used for Variance Components Estimation (VCE) is the following:
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_VarCompEst.par
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/renf90_VarCompEst.par</font>
 
 It will be run using the software pre **blupf90+** to generate the VCE.
-
+okok
 ```{bash eval= FALSE}
 # BLUPF90 parameter file created by RENUMF90
 DATAFILE
@@ -1161,8 +1171,9 @@ OPTION se_covar_function H2_1 g_3_3_1_1/(g_3_3_1_1+r_1_1)
 
 In the parameter card above, we remove the option for Quality Control and added options for Variance Components Estimation, for Missing data, for origID and for heritability estimation, but the MOST IMPORTANT PART is we need to change the OPTION SNP_FILE, replacing the original genotype file, for the "clean" version generated in the previous step.
 
-The Variance Components will be placed in the file: 
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/blupf90.log
+The Variance Components will be placed in the file:
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/blupf90.log</font>
+
 
 **blupf90.log**  
 <img src="image128.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
@@ -1173,6 +1184,7 @@ Now you should update you **renf90_VarCompEst.par** file with these informations
 Copy **Residual Variance** from blupf90.log and will paste on renf90_VarCompEst.par **RANDOM_RESIDUAL_VALUES**
 Copy **Genetic variance for effect x** from blupf90.log and will paste on renf90_VarCompEst.par **(CO) VARIANCE**
 
+run **blupf90+** again with the updated **renf90_VarCompEst.par**
 
 If the **Residual Variance** and **Genetic variance for effect x** didn't change in your blupf90.log the analysis ended, but if this value vary, you should update again the renf90.par and run again blupf90+ until this values don't change more.
 
@@ -1193,7 +1205,7 @@ Now that we have the Variance components we go for the next step:
 
 To do this, I'll: 
 <ul>
-<li> generate the Phenotype_FixEff file like bellow
+<li> **Keep** the Phenotype_FixEff file from the previous analysis with records for **252 individuals**
 <li> generate the genotype file like bellow
 <li> Perform the QUALITY CONTROL for the new (71 samples) genotype file
 <li> Add the VCE from the 252 data set in the parameter card
@@ -1202,6 +1214,7 @@ To do this, I'll:
 </ul>
 
 ### Prediction of SNP marker effects based on the GEBV
+
 
 #### GWAS for High and Low cortisol animals
 
@@ -1213,18 +1226,41 @@ To perform this first we need a a Genotype file only with the 71 animals (High=3
 
 ###### Phenotype and Fixed Effects files
 
-In this read_me file we performed a ssGWAS but keeping the phenotype and fixed effect information for all 252 individuals, only reducing the number of individuals for the Genotype file.
+<font color="red">In this read_me file we performed a ssGWAS but keeping the phenotype and fixed effect information for all 252 individuals, only reducing the number of individuals for the Genotype file.</font>.
+
+**BUT** we are going to used the code bellow to remove individuals with MEDIUM cortisol Phenotype just to use as base to get the genotype file in the next step. 
+```{r eval=FALSE}
+phenofix <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/fenofix.txt")
+
+# Now we are gona remove the intermediary animals from pheno object
+phenofix$Categorical <- ifelse(phenofix$V2 >= 956, "H", 
+                               ifelse(phenofix$V2 <= 190.8, "L", "M"))
+table(phenofix$Categorical)
+
+phenofix <- phenofix[phenofix$Categorical != "M", ]
+
+phenofix <- phenofix[, c("V1", "V2", "V3", "V4")]
+
+write.table(phenofix, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/fenofix.txt", col.names = F, row.names = F, quote = F)
+
+```
+
 
 ###### Genotype files
 I used this command line bellow to remove the individuals with MEDIUM phenotypes.
+okok
 ```{bash eval= FALSE}
-awk 'NR==FNR{ids[$1]; next} $1 in ids' fenofix.txt bruno_gntps_iid > bruno_gntps_iid_71
+awk 'NR==FNR{ids[$1]; next} $1 in ids' /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/fenofix.txt /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/bruno_gntps_iid > /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/bruno_gntps_iid_71
 ```
+
 
 #### Running renum_QC.par
 
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renum_QC.par
+Run with **renumf90**
 
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renum_QC.par</font>
+
+okok
 ```{bash eval = FALSE}
 DATAFILE
 fenofix.txt
@@ -1273,8 +1309,9 @@ We modified **renf90.par** in 3 copies:
 #### Running renf90_DataClean.par for Quality Control
 
 To run the parameter card bellow we are going to use the software **presGSf90**
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_DataClean.par
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_DataClean.par</font>
 
+okok
 ```{bash eval = FALSE}
 # BLUPF90 parameter file created by RENUMF90
 DATAFILE
@@ -1289,7 +1326,7 @@ WEIGHT(S)
  
 EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
  2         4 cross 
- 3        22 cross 
+ 3        23 cross 
  4      3724 cross 
 RANDOM_RESIDUAL VALUES
    77182.    
@@ -1307,7 +1344,9 @@ OPTION saveCleanSNPs
 OPTION minfreq 0.01
 OPTION map_file snpmap.txt
 OPTION excludeCHR 30 31
+
 ```
+
 
 #### Running renf90_ssGWAS1_Ginv.par for Ginv estimation
 
@@ -1318,9 +1357,9 @@ ulimit -s unlimited
 ```
 
 The parameter card bellow we are going to run using the software **blupf90+**:
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_ssGWAS1_Ginv.par</font>
 
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_ssGWAS1_Ginv.par
-
+okok
 ```{bash eval=FALSE}
 # BLUPF90 parameter file created by RENUMF90
 DATAFILE
@@ -1335,7 +1374,7 @@ WEIGHT(S)
  
 EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
  2         4 cross 
- 3        22 cross 
+ 3        23 cross 
  4      3724 cross 
 RANDOM_RESIDUAL VALUES
    77182.    
@@ -1359,8 +1398,9 @@ OPTION snp_p_value
 #### Running renf90_ssGWAS2_SNPeff.par for GWAS
 
 The parameter card bellow we are going to run using the software **postGSf90**:
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_ssGWAS2_SNPeff.par
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/renf90_ssGWAS2_SNPeff.par</font>
 
+okok
 ```{bash eval= FALSE}
 # BLUPF90 parameter file created by RENUMF90
 DATAFILE
@@ -1375,7 +1415,7 @@ WEIGHT(S)
  
 EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
  2         4 cross 
- 3        22 cross 
+ 3        23 cross 
  4      3724 cross 
 RANDOM_RESIDUAL VALUES
    77182.    
@@ -1395,7 +1435,7 @@ OPTION readA22Inverse
 OPTION map_file snpmap.txt_clean
 OPTION snp_p_value
 OPTION Manhattan_plot_R
-OPTION Manhattan_plot 
+OPTION Manhattan_plot
 ```
 
 This code will generate several files, among them:
@@ -1494,82 +1534,26 @@ dev.off()
 <img src="image129b.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 
-#### Get rsID
-
-For additional analysis like Variant Effect Prediction (VEP) we need the rsID, to get the rsID we use the software SNPChimp which requires SNP_names, but the BLUPF90 output have only the Chromosome and Position of the SNPs, so we are going to perfome these two steps to get one file with t he significant SNPs + SNP_name + rsID
-
-##### Step 01 = Bring the SNP name to GWAS output
-
-For this analysis we have to build this new sheet bringing SNP ID from snpmap.txt
-```{r eval=FALSE}
-gwas = read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval")
-colnames(gwas) <- c("V1", "V2", "LOG_P", "SNP", "CHR", "BP")
-gwas <- filter(gwas, LOG_P >= bonf)
-
-snpmap <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/snpmap.txt", header = T)
-
-# Filter snpmap to only include rows that match the CHR and BP values in out_genes
-filtered_snpmap <- snpmap[snpmap$CHR %in% gwas$CHR & snpmap$POS %in% gwas$BP, ]
-
-# Merge the filtered snpmap with out_genes
-gwas_snpname <- merge(gwas, filtered_snpmap[, c("CHR", "POS", "SNP_ID")], 
-                   by.x = c("CHR", "BP"), by.y = c("CHR", "POS"), 
-                   all.x = TRUE)
-
-gwas_snpname <- gwas_snpname[,c("CHR", "BP", "LOG_P", "SNP_ID")]
-
-write.csv(gwas_snpname, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
-```
-
-
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/chrsnp_pval_SNPid_ind_seg_sig_BLUPF90.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
-
-
-##### Step 02 = Bring the rsID  to the file with SNP name.
-After get the **rsID** from SNPCHIMP I produced this table with the code bellow:
-
-```{r eval=FALSE}
-rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/SNPchimp_result_2150988331.tsv", header = T)
-
-merged <- merge(rsid, gwas_snpname, by.x ="SNP_name", by.y ="SNP_ID")
-
-colnames(merged)
-
-merged <- merged[,c("SNP_name", "rs", "CHR", "BP", "LOG_P")]
-
-colnames(merged) <- c("SNP_name", "rsID", "CHR", "BP", "LOG_P")
-
-write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/gwas_ind_seg_sig_SNPname_rsID.csv")
-
-```
-
-```{r echo=FALSE}
-# Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gwas_ind_seg_sig_SNPname_rsID.csv")
-
-# Print the table using knitr::kable
-knitr::kable(data)
-
-```
+We will use the file <font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/**chrsnp_pval**</font> to get the p-values for the SNPs in the windows (that explain more than 0.5% of additive genetic variance)
 
 
 ## BLUPF90+ WINDOWS
+
+To perform Window approach on Blupf90+ I copied all files in: 
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno</font>
+to:
+<font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10</font>
+I did this because I'm not sure about which files the postGSf90 needs to run, so I duplicate the whole directory, and I will change only the file **renf90_ssGWAS2_SNPeff.par** name for **renf90_ssGWAS2_SNPeff_W_10.par** and change the options to perform the window approach.
+
 ### Running renf90_ssGWAS2_SNPeff_W_10.par for GWAS (WINDOWS)
 
 The parameter card bellow we are going to run using the software **postGSf90**:
 
-
+okok
 ```{bash eval= FALSE}
 # BLUPF90 parameter file created by RENUMF90
 DATAFILE
-renf90.dat
+ renf90.dat
 NUMBER_OF_TRAITS
            1
 NUMBER_OF_EFFECTS
@@ -1580,7 +1564,7 @@ WEIGHT(S)
  
 EFFECTS: POSITIONS_IN_DATAFILE NUMBER_OF_LEVELS TYPE_OF_EFFECT[EFFECT NESTED]
  2         4 cross 
- 3        22 cross 
+ 3        23 cross 
  4      3724 cross 
 RANDOM_RESIDUAL VALUES
    77182.    
@@ -1682,7 +1666,7 @@ The parameter file above will generate the following files:
 </ul>
 
 Bellow we can see the SNPs that explain more than **0.5%** of Genetic Variance 
-
+okok
 ```{r eval=FALSE}
 w_var <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar", header = F)
 w_var <- filter(w_var, V3 > 0.5)
@@ -1697,7 +1681,6 @@ write.csv(w_var, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_
 
 rsid <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/SNPchimp_result_1425506748.tsv", header = T)
 
-
 merged <- merge(rsid, w_var, by.x ="SNP_name", by.y ="SNP_ID")
 
 colnames(merged)
@@ -1711,7 +1694,7 @@ write.csv(merged, "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all
 
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
-data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/w10_snp_rsid_snpvar_05.csv")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/snpID_w05_rsid_snpvar.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
@@ -1721,7 +1704,7 @@ knitr::kable(data)
 
 
 #### Manhattan Plots for BLUPF90 Windows ssGWAS
-
+okok
 ```{r eval=FALSE}
 # Set working directory
 setwd("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/")
@@ -1785,6 +1768,7 @@ dev.off()
 
 <img src="image191.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
+stop stop
 ### Finding p-values for each SNP in the window
 
 To bring the p-value for each snp in the window we need to use files from different approachs:
@@ -1795,10 +1779,11 @@ To bring the p-value for each snp in the window we need to use files from differ
 </ul>
 <li> chrsnp_pval: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval</p>
 <ul>
-<li> which contains the p-value for each snp. This file is not from windows approach. Is for the approach which considers each SNP individually (beside fit all SNPs at the same time)
+<li> which contains the p-value for each snp. This file is **not** from windows approach. Is for the approach which considers each SNP individually (beside fit all SNPs at the same time)
 </ul>
 </ul>
 
+okok
 ```{r eval=FALSE}
 chrsnpvar <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar", header = F)
 chrsnpvar <- filter(chrsnpvar, V3 > 0.5)
@@ -1809,8 +1794,6 @@ chrsnp_pval <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/
 colnames(chrsnp_pval) <- c("trait", "effect", "-log10(p-value)", "SNP", "Chromosome", "Position in bp")
 
 snp_map <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/snpmap.txt_clean", header = T)
-
-#####
 
 # Bringing p-value for each snp in the window
 
@@ -1874,6 +1857,7 @@ knitr::kable(data)
 
 ### 0.5% Windows - BLUPF90+ GALLO
 
+okok
 ```{r eval=FALSE}
 gwas <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/snpID_w05_rsid_snpvar.csv")
 colnames(gwas)
@@ -1941,13 +1925,13 @@ knitr::kable(data)
 ```
 
 **QTL Plots**
-
+okok
 ```{r eval=FALSE}
 # Set working directory
-setwd("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10")
+setwd("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/keep_all_pheno/windows_10")
 
 #QTL type plot
-oldpar <- par(mar=c(1,15,0.5,1))
+oldpar <- par(mar=c(5,15,0.5,1))
 plot_qtl_info(out.qtl, qtl_plot = "qtl_type", cex=1.5)
 
 #QTL names plot (by type)
@@ -1977,7 +1961,7 @@ out.enrich_qtl_name <-qtl_enrich(qtl_db= qtl_UCD1_2,
 
 # Sorting the dataframe in ascending order of adj.pval
 sorted_df <- out.enrich_qtl_name[order(out.enrich_qtl_name$adj.pval), ]
-write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_name_w05.csv")
+write.csv(sorted_df,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/keep_all_pheno/windows_10/out_enrich_qtl_genome_name_w05.csv")
 
 
 out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2, 
@@ -1986,7 +1970,7 @@ out.enrich_qtl_type <-qtl_enrich(qtl_db= qtl_UCD1_2,
                                  padj = "fdr",nThreads = 2)
 
 sorted_df_type <- out.enrich_qtl_type[order(out.enrich_qtl_type$adj.pval), ]
-write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/windows10/out_enrich_qtl_genome_type_w05.csv")
+write.csv(out.enrich_qtl_type,"/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/keep_all_pheno/windows_10/out_enrich_qtl_genome_type_w05.csv")
 
 
 #Plots
@@ -2045,6 +2029,28 @@ knitr::kable(data)
 ```
 
 <img src="image190.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
+
+### 0.5% Windows - BLUPF90+ g:PROFILER
+
+This output are in this directory:
+<font color="blue">/home/bambrozi/2_CORTISOL/GPROFILER/BLUPF90_GWAS/keep_all_pheno_windows</font>
+
+Bellow the data inserted in g:PROFILER
+<img src="image199.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+Bellow we can find the output for g:Profiler online
+
+<img src="image198.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gProfiler_btaurus_2025-02-12_6-30-31 p.m.__intersections.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
 
 
 # Heritability estimation - BLUPF90
