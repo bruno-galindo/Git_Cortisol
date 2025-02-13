@@ -1,7 +1,7 @@
 ---
 title: "Read_me"
 author: "Galindo, B. A"
-date: "2024-05-22"
+date: "2025-02-12"
 output:
   html_document:
     css: styles.css
@@ -784,7 +784,7 @@ After ran the GWAS above I got the following message from the GCTA:
 
 As we got this error message, we needed to solve this problem, and for that we used the whole sample size (252 individuals) to estimate the variance components, and after this, using this variance components from the whole sample we performed the ssGWAS with the subset of individuals (34 High + 37 Low = 71), but this was not possible in GCTA so we switched to another software (**BLUPF90+**)
 
-# BLUPF90+ GWAS
+# GWAS BLUPF90+ 
 
 To run ssGWAS on Blupf90+ suite, we will need 4 different softwares:
 
@@ -1213,7 +1213,7 @@ To do this, I'll:
 <li> Run GWAS
 </ul>
 
-### Prediction of SNP marker effects based on the GEBV
+## Prediction of SNP marker effects based on the GEBV
 
 
 #### GWAS for High and Low cortisol animals
@@ -1855,7 +1855,7 @@ knitr::kable(data)
 
 ```
 
-### 0.5% Windows - BLUPF90+ GALLO
+# GALLO - 0.5% Windows - BLUPF90+ 
 
 okok
 ```{r eval=FALSE}
@@ -2030,7 +2030,7 @@ knitr::kable(data)
 
 <img src="image190.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;"> 
 
-### 0.5% Windows - BLUPF90+ g:PROFILER
+# g:PROFILER - 0.5% Windows - BLUPF90+ 
 
 This output are in this directory:
 <font color="blue">/home/bambrozi/2_CORTISOL/GPROFILER/BLUPF90_GWAS/keep_all_pheno_windows</font>
@@ -2302,7 +2302,7 @@ In our example:
 <img src="image103.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 
-## Additional analysis
+# Additional analysis
 
 
 ### GEBVs Average and SD
