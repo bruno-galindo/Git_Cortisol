@@ -1855,6 +1855,33 @@ knitr::kable(data)
 
 ```
 
+Now I used the code bellow to find the smaller SNP p-value per window.
+
+```{r eval=FALSE}
+win_allsnp_pval <- read.csv("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/pval_for_each_snp_in_window.csv")
+
+library(dplyr)
+
+win_allsnp_pval <- win_allsnp_pval %>%
+  mutate(windows = rep(1:ceiling(n() / 10), each = 10, length.out = n()))
+
+
+min_pval_per_window <- win_allsnp_pval %>%
+  group_by(windows) %>%
+  summarise(min_p_value = min(p_value, na.rm = TRUE)) %>%
+  ungroup()
+
+
+min_pval_per_window_entire_row <- win_allsnp_pval %>%
+  group_by(windows) %>%
+  slice_min(p_value, with_ties = FALSE) %>%
+  ungroup()
+
+write.csv(min_pval_per_window_entire_row, 
+          "/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/smaller_snp_pval_per_window.csv")
+```
+
+
 # GALLO - 0.5% Windows - BLUPF90+ 
 
 okok
