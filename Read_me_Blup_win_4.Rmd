@@ -795,7 +795,7 @@ To run ssGWAS on Blupf90+ suite, we will need 4 different softwares:
 <li> **postGSF90**: perform GWAS
 </ul>
 
-The tutorial for preGSF90 and postGSF90 we can find in the link bellow
+The tutorial for preGSF90 and postGSF90 we can find in the link bellow  
 <https://nce.ads.uga.edu/wiki/doku.php?id=readme.pregsf90#gwas_options_postgsf90>
 
 According to the BLUPF90+ tutorial:
@@ -920,7 +920,7 @@ The appearance of this file is like this:
 
 The file should be saved as text file, with separation by space and no columns names.
 
-We  used the code below to replace the cid for iid. First we merge using the second column of the firs file, and the first column of the second file. Then we use again the command awk to keep only the third and fifth columsn and sabe in a different object.
+We  used the code below to replace the cid for iid. First we merge using the second column of the firs file, and the first column of the second file. Then we use again the command awk to keep only the third and fifth columsn and save in a different object.
 
 <font color="blue">/home/bambrozi/2_CORTISOL/RawFiles/Genotypes</font>
 
@@ -930,9 +930,11 @@ awk 'FNR==NR {a[$2]=$0; next} {print a[$1], $0}' bruno_ids.csv bruno_gntps.txt |
 ```
 
 Below we can find the file's location from the code above:
-/home/bambrozi/2_CORTISOL/RawFiles/Genotypes/bruno_gntps.txt
-/home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv
-/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/bruno_gntps_iid **(this file has 252 individuals)**
+<ul>
+<li> /home/bambrozi/2_CORTISOL/RawFiles/Genotypes/bruno_gntps.txt  
+<li> /home/bambrozi/2_CORTISOL/RawFiles/Pedigree/bruno_ids.csv  
+<li> /home/bambrozi/2_CORTISOL/GWAS/BLUPF90/bruno_gntps_iid **(this file has 252 individuals)**  
+</ul>
 
 
 ### Download the executable files
@@ -947,7 +949,7 @@ Download from this website <https://nce.ads.uga.edu/html/projects/programs/Linux
 
 ### SNP MAP
 
-<font color="blue">/home/bambrozi/2_CORTISOL/RawFiles/SNP_map</font>
+<font color="blue">/home/bambrozi/2_CORTISOL/RawFiles/SNP_map</font>  
 okok
 ```{r eval = FALSE}
 mapfile <- read.table("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/DGVsnpinfo.2404.ho", header = T)
@@ -1768,16 +1770,16 @@ dev.off()
 
 <img src="image191.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
-stop stop
+
 ### Finding p-values for each SNP in the window
 
 To bring the p-value for each snp in the window we need to use files from different approachs:
 <ul>
-<li> chrsnpvar: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar</p>
+<li> **chrsnpvar**: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/windows_10/chrsnpvar</p>
 <ul>
 <li> which contains the variance explained by each window. This file is from windows approach
 </ul>
-<li> chrsnp_pval: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval</p>
+<li> **chrsnp_pval**: <p style="color:blue;">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/chrsnp_pval</p>
 <ul>
 <li> which contains the p-value for each snp. This file is **not** from windows approach. Is for the approach which considers each SNP individually (beside fit all SNPs at the same time)
 </ul>
@@ -1843,11 +1845,9 @@ The p-value for each SNP in the window is bellow:
 
 
 ```{r echo=FALSE}
-library(readxl)
-library(knitr)
 
 # Read the Excel file (first sheet by default)
-data <- read_excel("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/pval_for_each_snp_in_window.xlsx")
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/pval_for_each_snp_in_window.csv")
 
 # Print the table
 knitr::kable(data)
@@ -1935,6 +1935,14 @@ library(tidyverse)
 out.qtl.clean <- select(out.qtl, c("SNP", "CHR", "QTL_type", "start_pos", "end_pos","QTL_ID"))
 write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/keep_all_pheno/windows_10/lowest_snp_pvalue_per_window/out_qtl_clean.csv")
 
+
+out_qtl_unique <- out_qtl[!duplicated(out_qtl$QTL_ID), ]
+
+library(tidyverse)
+out.qtl.clean.unique <- select(out_qtl_unique, c("SNP", "CHR", "QTL_type", "start_pos", "end_pos","QTL_ID"))
+
+write.csv(out.qtl.clean, file = "/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/keep_all_pheno/windows_10/lowest_snp_pvalue_per_window/out_qtl_clean_UNIQUE.csv")
+
 ```
 
 The GALLO output are bellow:
@@ -1952,12 +1960,23 @@ knitr::kable(data)
 **FOR QTLs**
 ```{r echo=FALSE}
 # Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_clean_UNIQUE.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
+
+**FOR QTLs - UNIQUE**
+```{r echo=FALSE}
+# Read the CSV file into a data frame
 data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/out_qtl_clean.csv")
 
 # Print the table using knitr::kable
 knitr::kable(data)
 
 ```
+
 
 **QTL Plots**
 okok
@@ -2088,6 +2107,60 @@ knitr::kable(data)
 
 ```
 
+I used the code bellow to bring the gene name to g:PROFILER output
+```{r eval=FALSE}
+
+out_genes <- read.csv("/home/bambrozi/2_CORTISOL/GALLO/GWAS_BLUPF90/keep_all_pheno/windows_10/lowest_snp_pvalue_per_window/out_genes.csv")
+
+out_gprofiler <- read.csv("/home/bambrozi/2_CORTISOL/GPROFILER/BLUPF90_GWAS/keep_all_pheno_windows/smallest_snp_pvalue_per_window/gProfiler_btaurus_2025-02-14_11-00-34 a.m.__intersections.csv")
+
+# Supondo que out_gprofiler seja o seu data frame e intersections a coluna que contém as IDs separadas por vírgula
+library(tidyr)
+
+# Dividir a coluna 'intersections' em duas novas colunas, por exemplo 'ID_1' e 'ID_2'
+out_gprofiler <- out_gprofiler %>%
+  separate(intersections, into = c("ID_1", "ID_2"), sep = ",")
+
+# Visualize o resultado
+print(out_gprofiler)
+
+
+gene_list <- out_genes[, c("gene_id", "gene_name")]
+
+gene_list <- gene_list[!duplicated(gene_list$gene_id), ]
+
+library(dplyr)
+
+# Supondo que out_gprofiler tenha a coluna 'ID_1' e gene_list tenha as colunas 'gene_id' e 'gene_name'
+
+out_gprofiler <- out_gprofiler %>%
+  left_join(gene_list, by = c("ID_1" = "gene_id"))
+
+colnames(out_gprofiler)
+
+# Rename 'gene_name' to 'gene_name_1'
+colnames(out_gprofiler)[colnames(out_gprofiler) == "gene_name"] <- "gene_name_1"
+
+out_gprofiler <- out_gprofiler %>%
+  left_join(gene_list, by = c("ID_2" = "gene_id"))
+
+# Rename 'gene_name' to 'gene_name_1'
+colnames(out_gprofiler)[colnames(out_gprofiler) == "gene_name"] <- "gene_name_2"
+
+write.csv(out_gprofiler,
+          "/home/bambrozi/2_CORTISOL/GPROFILER/BLUPF90_GWAS/keep_all_pheno_windows/smallest_snp_pvalue_per_window/gProfiler_btaurus_2025-02-14_11-00-34 a.m.__intersections_gene_name.csv")
+
+```
+
+
+```{r echo=FALSE}
+# Read the CSV file into a data frame
+data <- read.csv("C:/Users/galin/OneDrive - University of Guelph/0.Post doc/4_Cortisol/Git_Cortisol/gProfiler_btaurus_2025-02-14_11-00-34 a.m.__intersections_gene_name.csv")
+
+# Print the table using knitr::kable
+knitr::kable(data)
+
+```
 
 
 # Heritability estimation - BLUPF90
