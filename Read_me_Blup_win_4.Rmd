@@ -1538,6 +1538,74 @@ dev.off()
 
 We will use the file <font color="blue">/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno/**chrsnp_pval**</font> to get the p-values for the SNPs in the windows (that explain more than 0.5% of additive genetic variance)
 
+#### qq-Plot
+
+```{r eval=FALSE}
+setwd("/home/bambrozi/2_CORTISOL/GWAS/BLUPF90/EXTREME_PHENO/keep_all_pheno")
+
+
+gwas<- read.table("chrsnp_pval", h=F)
+
+colnames(gwas) <- c("trait", "effect", "-log10(p-value)", "SNP", "Chromosome", "Position in bp")
+
+gwas$p_value <- 10^(-gwas$`-log10(p-value)`)
+
+ps<- gwas$p_value
+
+inflation <- function(ps) {
+  chisq <- qchisq(1 - ps, 1)
+  lambda <- median(chisq) / qchisq(0.5, 1)
+  lambda
+}
+# Calculating the lambda -  the lambda statistic should be close to 1 if
+#the points fall within the expected range, or greater than one if 
+# the observed p-values are more significant than expected.
+inflation(ps)
+
+gg_qqplot <- function(ps, ci = 0.95) {
+  n  <- length(ps)
+  df <- data.frame(
+    observed = -log10(sort(ps)),
+    expected = -log10(ppoints(n)),
+    clower   = -log10(qbeta(p = (1 - ci) / 2, shape1 = 1:n, shape2 = n:1)),
+    cupper   = -log10(qbeta(p = (1 + ci) / 2, shape1 = 1:n, shape2 = n:1))
+  )
+  log10Pe <- expression(paste("Expected -log"[10], plain(P)))
+  log10Po <- expression(paste("Observed -log"[10], plain(P)))
+  ggplot(df) +
+    geom_ribbon(
+      mapping = aes(x = expected, ymin = clower, ymax = cupper),
+      alpha = 0.1
+    ) +
+    geom_point(aes(expected, observed), shape = 1, size = 3) +
+    geom_abline(intercept = 0, slope = 1, alpha = 0.5) +
+    # geom_line(aes(expected, cupper), linetype = 2, size = 0.5) +
+    # geom_line(aes(expected, clower), linetype = 2, size = 0.5) +
+    xlab(log10Pe) +
+    ylab(log10Po)
+}
+
+## plot -----
+gg_qqplot(ps) +
+  theme_bw(base_size = 24) +
+  annotate(
+    geom = "text",
+    x = -Inf,
+    y = Inf,
+    hjust = -0.15,
+    vjust = 1 + 0.15 * 3,
+    label = sprintf("λ = %.2f", inflation(ps)),
+    size = 8
+  ) +
+  theme(
+    axis.ticks = element_line(size = 0.5),
+    panel.grid = element_blank()
+    # panel.grid = element_line(size = 0.5, color = "grey80")
+  )
+
+```
+
+<img src="image200.png" alt="My Image" style="display: block; margin-left: auto; margin-right: auto;">
 
 ## BLUPF90+ WINDOWS
 
